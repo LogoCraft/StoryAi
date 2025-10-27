@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n-key="appTitle">Çoklu Yaratım Aracı</title>
+    <!-- Tailwind CSS CDN --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons for Settings --><script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <!-- Inter Font --><style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        /* Tema geçişleri için temel stil ve gövde rengi */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Hafif ve Koyu Mod Renkleri */
+        body {
+            background-color: #f7f7f7;
+            color: #1f2937; /* Gray-800 */
+        }
+        .dark body {
+            background-color: #111827; /* Gray-900 */
+            color: #f3f4f6; /* Gray-100 */
+        }
+        .container {
+            max-width: 1000px;
+            background-color: #ffffff;
+            transition: background-color 0.3s;
+        }
+        .dark .container {
+            background-color: #1f2937; /* Gray-800 */
+        }
+        /* İkincil öğeler (Seçenekler kutusu, çıktı kutusu) */
+        .secondary-bg {
+            background-color: #f3f4f6; /* Gray-100 */
+            border-color: #e5e7eb; /* Gray-200 */
+        }
+        .dark .secondary-bg {
+            background-color: #374151; /* Gray-700 */
+            border-color: #4b5563; /* Gray-600 */
+        }
+        /* Girişler */
+        .input-style {
+            background-color: #ffffff;
+            border-color: #d1d5db;
+            color: #1f2937;
+        }
+        .dark .input-style {
+            background-color: #1f2937;
+            border-color: #4b5563;
+            color: #f3f4f6;
+        }
+
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4f46e5;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        .dark .loading-spinner {
+            border-color: rgba(255, 255, 255, 0.1);
+            border-left-color: #a5b4fc; /* Indigo-300 */
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Ayarlar paneli stilleri */
+        .settings-panel, .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 320px;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 50;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .dark .settings-panel, .dark .login-modal {
+            background-color: #1f2937; /* Gray-800 */
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .settings-panel.open {
+            transform: translateX(0);
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Giriş Modalı Stilleri */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 60;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 400px;
+        }
+        .dark .modal-content {
+            background-color: #1f2937;
+        }
+
+        /* Dil seçimi tuşları */
+        .lang-button {
+            transition: background-color 0.2s, color 0.2s;
+            border: 1px solid #d1d5db;
+        }
+        .dark .lang-button {
+            border-color: #4b5563;
+        }
+        .lang-button.active {
+            background-color: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <!-- Giriş Modalı (LOGIN MODAL) --><div id="loginModalOverlay" class="modal-overlay">
+        <div class="modal-content text-center">
+            <h2 class="text-3xl font-extrabold text-indigo-600 mb-6" data-i18n-key="loginTitle">Giriş Yap</h2>
+            <form id="loginForm">
+                <div class="mb-6">
+                    <label for="usernameInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-left" data-i18n-key="usernameLabel">Kullanıcı Adı:</label>
+                    <input type="text" id="usernameInput" required data-i18n-placeholder="usernamePlaceholder" placeholder="Kullanıcı adınızı girin" class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm input-style">
+                </div>
+                <button type="submit" class="w-full px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300" data-i18n-key="loginAction">
+                    Giriş Yap
+                </button>
+            </form>
+        </div>
+    </div>
+    <!-- /Giriş Modalı -->
+
+    <!-- Ayarlar Paneli ve Overlay --><div id="settingsOverlay" class="overlay hidden" onclick="toggleSettings()"></div>
+
+    <div id="settingsPanel" class="settings-panel p-6">
+        <div class="flex justify-between items-center pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100" data-i18n-key="settingsTitle">Ayarlar</h2>
+            <button onclick="toggleSettings()" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <!-- Tema Seçimi --><div class="mb-6">
+            <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-3" data-i18n-key="themeTitle">Tema Seçimi</h3>
+            <div class="flex space-x-3">
+                <button onclick="setTheme('light')" id="themeLight" class="w-full py-2 px-4 rounded-lg shadow-sm text-sm border hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <i data-lucide="sun" class="w-4 h-4 inline mr-2"></i><span data-i18n-key="themeLight">Açık Mod</span>
+                </button>
+                <button onclick="setTheme('dark')" id="themeDark" class="w-full py-2 px-4 rounded-lg shadow-sm text-sm border hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <i data-lucide="moon" class="w-4 h-4 inline mr-2"></i><span data-i18n-key="themeDark">Koyu Mod</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dil Seçimi --><div class="mb-6">
+            <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-3" data-i18n-key="languageTitle">Dil Seçimi</h3>
+            <div id="languageSelector" class="grid grid-cols-2 gap-2">
+                <!-- Dil butonları JS tarafından oluşturulacak --></div>
+        </div>
+        
+        <!-- Kullanıcı Durumu (Ayarlar içinde göster) -->
+        <div class="mt-auto pt-6 border-t border-gray-200 dark:border-gray-700">
+             <div class="flex items-center justify-between">
+                <p id="authStatusText" class="text-sm font-medium text-gray-600 dark:text-gray-300">...</p>
+                <button id="authActionButton" onclick="handleAuthAction()" class="px-3 py-1 text-sm rounded-full shadow-sm text-white bg-red-500 hover:bg-red-600 transition">
+                    <!-- Giriş Yap/Çıkış Yap metni -->
+                </button>
+             </div>
+        </div>
+    </div>
+    <!-- /Ayarlar Paneli -->
+
+    <header class="flex justify-between items-start mb-6">
+        <!-- Ayarlar Butonu --><button onclick="toggleSettings()" class="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-200">
+            <i data-lucide="settings" class="w-6 h-6"></i>
+        </button>
+
+        <div class="flex-grow text-center mx-4">
+            <h1 class="text-3xl font-bold mb-1" data-i18n-key="appTitle">Çoklu Yaratım Sihirbazı</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n-key="appSubtitle">İstediğiniz çıktı türlerini seçin ve komutunuzu girin.</p>
+        </div>
+
+        <!-- Kullanıcı Adı veya Giriş Yap Butonu --><div class="w-10 flex justify-end">
+            <span id="userNameDisplay" class="text-indigo-600 dark:text-indigo-400 font-semibold text-sm self-center"></span>
+        </div>
+    </header>
+
+    <!-- ANA İÇERİK (Giriş Yapılana Kadar Gizli) --><div id="mainContent" class="hidden">
+        <div class="container mx-auto p-6 md:p-10 shadow-xl rounded-2xl">
+            <!-- Seçenekler ve Komut Girişi --><div class="space-y-6">
+                <!-- Seçenekler --><div class="bg-indigo-50 dark:bg-indigo-900/30 p-5 rounded-xl border border-indigo-200 dark:border-indigo-900 transition duration-300">
+                    <p class="font-semibold text-indigo-700 dark:text-indigo-300 mb-3" data-i18n-key="outputTitle">Çıktı Türleri (Birini veya Birden Fazlasını Seçin):</p>
+                    <div class="flex flex-wrap gap-4">
+                        <label for="checkText" class="inline-flex items-center cursor-pointer secondary-bg px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition duration-200 border">
+                            <input type="checkbox" id="checkText" checked class="form-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500">
+                            <span class="ml-2 text-gray-700 dark:text-gray-200 font-medium" data-i18n-key="createText">Metin Oluşturma</span>
+                        </label>
+                        <label for="checkSpeech" class="inline-flex items-center cursor-pointer secondary-bg px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition duration-200 border">
+                            <input type="checkbox" id="checkSpeech" class="form-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500">
+                            <span class="ml-2 text-gray-700 dark:text-gray-200 font-medium" data-i18n-key="createSpeech">Seslendirme (TTS)</span>
+                        </label>
+                        <label for="checkImage" class="inline-flex items-center cursor-pointer secondary-bg px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition duration-200 border">
+                            <input type="checkbox" id="checkImage" class="form-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500">
+                            <span class="ml-2 text-gray-700 dark:text-gray-200 font-medium" data-i18n-key="createImage">Görsel Oluşturma</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Komut Girişi --><div>
+                    <label for="prompt" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-i18n-key="promptLabel">Komutunuzu Girin:</label>
+                    <textarea id="prompt" rows="4" data-i18n-placeholder="promptPlaceholder" placeholder="Örn: 'Uzayda yüzen sevimli bir kedi' hakkında kısa bir hikaye yaz." class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm input-style"></textarea>
+                </div>
+
+                <!-- İşlem Butonu --><button id="generateButton" onclick="processRequest()" class="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 transform hover:scale-[1.01]">
+                    <span id="buttonText" data-i18n-key="generateButton">Yaratımı Başlat</span>
+                    <div id="loadingIndicator" class="loading-spinner hidden ml-3"></div>
+                </button>
+                <p id="errorMessage" class="text-red-600 dark:text-red-400 text-sm mt-2 hidden text-center font-medium"></p>
+            </div>
+
+            <!-- Sonuç Alanı --><div id="resultsArea" class="mt-10 border-t pt-8 space-y-8 border-gray-200 dark:border-gray-700">
+                <h2 class="text-2xl font-bold text-center" data-i18n-key="resultsTitle">Sonuçlar</h2>
+
+                <!-- Metin Çıktısı --><div id="textOutputContainer" class="hidden">
+                    <h3 class="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700" data-i18n-key="generatedTextTitle">Oluşturulan Metin</h3>
+                    <div id="textOutput" class="secondary-bg p-5 rounded-lg border whitespace-pre-wrap leading-relaxed min-h-[100px]"></div>
+                </div>
+
+                <!-- Seslendirme Çıktısı --><div id="speechOutputContainer" class="hidden">
+                    <h3 class="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700" data-i18n-key="generatedSpeechTitle">Seslendirme (TTS)</h3>
+                    <div class="flex items-center space-x-4">
+                        <audio id="audioPlayer" controls class="w-full hidden rounded-full shadow-md"></audio>
+                        <p id="speechPlaceholder" class="text-gray-500 dark:text-gray-400" data-i18n-key="statusSpeechPlaceholder">Ses henüz oluşturulmadı.</p>
+                    </div>
+                </div>
+
+                <!-- Görsel Çıktısı --><div id="imageOutputContainer" class="hidden">
+                    <h3 class="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700" data-i18n-key="generatedImageTitle">Oluşturulan Görsel</h3>
+                    <div id="imageOutput" class="flex justify-center items-center p-4 secondary-bg rounded-lg border">
+                        <img id="generatedImage" src="" alt="Oluşturulan Görsel" class="w-full max-w-lg h-auto rounded-lg shadow-xl hidden">
+                        <p id="imagePlaceholder" class="text-gray-500 dark:text-gray-400" data-i18n-key="statusImagePlaceholder">Görsel henüz oluşturulmadı.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- /ANA İÇERİK -->
+
+    <script>
+        // --- AUTH & LOCALSTORAGE BAŞLANGIÇ ---
+        let currentUsername = null;
+
+        function checkAuthStatus() {
+            // Kullanıcı durumunu localStorage'dan kontrol et
+            currentUsername = localStorage.getItem('appUsername');
+            updateAuthUI();
+        }
+
+        function updateAuthUI() {
+            const t = translations[currentLanguage];
+            const mainContent = document.getElementById('mainContent');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            const authStatusText = document.getElementById('authStatusText');
+            const authActionButton = document.getElementById('authActionButton');
+
+            if (currentUsername) {
+                // Giriş yapılmış
+                userNameDisplay.textContent = currentUsername;
+                authStatusText.innerHTML = `${t.welcomeMessage} <span class="text-indigo-500 dark:text-indigo-400 font-bold">${currentUsername}</span>`;
+                authActionButton.textContent = t.logoutButtonText;
+                authActionButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                authActionButton.classList.add('bg-red-500', 'hover:bg-red-600');
+                mainContent.classList.remove('hidden');
+                document.getElementById('loginModalOverlay').classList.remove('open');
+            } else {
+                // Çıkış yapılmış
+                userNameDisplay.textContent = '';
+                authStatusText.textContent = t.statusLoggedOut;
+                authActionButton.textContent = t.loginButtonText;
+                authActionButton.classList.remove('bg-red-500', 'hover:bg-red-600');
+                authActionButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                mainContent.classList.add('hidden');
+                showLoginModal();
+            }
+        }
+
+        function showLoginModal() {
+            // Giriş modalını göster
+            document.getElementById('loginModalOverlay').classList.add('open');
+            document.getElementById('usernameInput').focus();
+        }
+
+        window.login = function(username) {
+            // Kullanıcı adı kaydet ve UI'ı güncelle
+            localStorage.setItem('appUsername', username);
+            currentUsername = username;
+            updateAuthUI();
+        }
+
+        window.logout = function() {
+            // Kullanıcı adı sil ve UI'ı güncelle
+            localStorage.removeItem('appUsername');
+            currentUsername = null;
+            updateAuthUI();
+            window.toggleSettings(); // Ayarlar panelini kapat
+        }
+
+        window.handleAuthAction = function() {
+            // Ayarlar panelindeki butona tıklandığında (Çıkış Yap/Giriş Yap)
+            if (currentUsername) {
+                window.logout();
+            } else {
+                window.toggleSettings(); // Ayarlar panelini kapat
+                showLoginModal();
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('usernameInput').value.trim();
+            if (username) {
+                window.login(username);
+            }
+        });
+        // --- AUTH & LOCALSTORAGE BİTİŞ ---
+
+
+        // --- Ayarlar ve i18n ---
+        const LANGUAGES = {
+            'tr': 'Türkçe',
+            'az': 'Azərbaycanca',
+            'en': 'English',
+            'es': 'Español',
+            'de': 'Deutsch',
+            'ru': 'Русский'
+        };
+
+        // Çeviri Haritası
+        const translations = {
+            'tr': {
+                appTitle: 'Çoklu Yaratım Sihirbazı',
+                appSubtitle: 'İstediğiniz çıktı türlerini seçin ve komutunuzu girin.',
+                settingsTitle: 'Ayarlar',
+                themeTitle: 'Tema Seçimi',
+                themeLight: 'Açık Mod',
+                themeDark: 'Koyu Mod',
+                languageTitle: 'Dil Seçimi',
+                outputTitle: 'Çıktı Türleri (Birini veya Birden Fazlasını Seçin):',
+                createText: 'Metin Oluşturma',
+                createSpeech: 'Seslendirme (TTS)',
+                createImage: 'Görsel Oluşturma',
+                promptLabel: 'Komutunuzu Girin:',
+                promptPlaceholder: "Örn: 'Uzayda yüzen sevimli bir kedi' hakkında kısa bir hikaye yaz.",
+                generateButton: 'Yaratımı Başlat',
+                processingText: 'İşleniyor...',
+                errorNoPrompt: 'Lütfen bir komut girin.',
+                errorNoOutput: 'Lütfen en az bir çıktı türü seçin.',
+                resultsTitle: 'Sonuçlar',
+                generatedTextTitle: 'Oluşturulan Metin',
+                generatedSpeechTitle: 'Seslendirme (TTS)',
+                generatedImageTitle: 'Oluşturulan Görsel',
+                statusGeneratingText: 'Metin Oluşturuluyor...',
+                statusGeneratingSpeech: 'Seslendiriliyor... Lütfen bekleyin.',
+                statusGeneratingImage: 'Görsel Oluşturuluyor... Lütfen bekleyin.',
+                statusSpeechPlaceholder: 'Ses henüz oluşturulmadı.',
+                statusImagePlaceholder: 'Görsel henüz oluşturulmadı.',
+                statusErrorText: 'Hata: Metin oluşturulamadı. (',
+                statusErrorSpeech: 'Hata: Seslendirme yapılamadı. (',
+                statusErrorImage: 'Hata: Görsel oluşturulamadı. (',
+                statusErrorGeneral: 'Genel Hata: İşlem sırasında bir sorun oluştu. ',
+                statusTextUnavailable: 'Metin alınamadı.',
+
+                // Yeni Auth Keys
+                loginTitle: 'Giriş Yap',
+                usernameLabel: 'Kullanıcı Adı',
+                usernamePlaceholder: 'Kullanıcı adınızı girin',
+                loginAction: 'Giriş Yap',
+                loginButtonText: 'Giriş Yap',
+                logoutButtonText: 'Çıkış Yap',
+                welcomeMessage: 'Hoş geldiniz,',
+                statusLoggedOut: 'Giriş yapılmadı.'
+            },
+            'az': {
+                appTitle: 'Çoxfunksiyalı Yaradıcılıq Sihirbazı',
+                appSubtitle: 'İstədiyiniz çıxış növlərini seçin və əmrinizi daxil edin.',
+                settingsTitle: 'Tənzimləmələr',
+                themeTitle: 'Mövzu Seçimi',
+                themeLight: 'İşıqlı Rejim',
+                themeDark: 'Tünd Rejim',
+                languageTitle: 'Dil Seçimi',
+                outputTitle: 'Çıxış Növləri (Birini və ya Bir Neçəsini Seçin):',
+                createText: 'Mətn Yaratma',
+                createSpeech: 'Səsləndirmə (TTS)',
+                createImage: 'Görsel Yaratma',
+                promptLabel: 'Əmrinizi Daxil Edin:',
+                promptPlaceholder: "Nümunə: 'Kosmosda üzən şirin pişik' haqqında qısa hekayə yaz.",
+                generateButton: 'Yaratmağa Başla',
+                processingText: 'İşlənir...',
+                errorNoPrompt: 'Zəhmət olmasa bir əmr daxil edin.',
+                errorNoOutput: 'Zəhmət olmasa ən azı bir çıxış növü seçin.',
+                resultsTitle: 'Nəticələr',
+                generatedTextTitle: 'Yaradılan Mətn',
+                generatedSpeechTitle: 'Səsləndirmə (TTS)',
+                generatedImageTitle: 'Yaradılan Görsəl',
+                statusGeneratingText: 'Mətn Yaradılır...',
+                statusGeneratingSpeech: 'Səsləndirilir... Zəhmət olmasa gözləyin.',
+                statusGeneratingImage: 'Görsəl Yaradılır... Zəhmət olmasa gözləyin.',
+                statusSpeechPlaceholder: 'Səs hələ yaradılmayıb.',
+                statusImagePlaceholder: 'Görsəl hələ yaradılmayıb.',
+                statusErrorText: 'Xəta: Mətn yaradıla bilmədi. (',
+                statusErrorSpeech: 'Xəta: Səsləndirmə edilə bilmədi. (',
+                statusErrorImage: 'Xəta: Görsəl yaradıla bilmədi. (',
+                statusErrorGeneral: 'Ümumi Xəta: Əməliyyat zamanı bir problem yarandı. ',
+                statusTextUnavailable: 'Mətn əldə edilmədi.',
+
+                // Yeni Auth Keys
+                loginTitle: 'Giriş Et',
+                usernameLabel: 'İstifadəçi Adı',
+                usernamePlaceholder: 'İstifadəçi adınızı daxil edin',
+                loginAction: 'Giriş Et',
+                loginButtonText: 'Giriş Et',
+                logoutButtonText: 'Çıxış Et',
+                welcomeMessage: 'Xoş gəlmisiniz,',
+                statusLoggedOut: 'Giriş edilmədi.'
+            },
+            'en': {
+                appTitle: 'Multi-Creation Wizard',
+                appSubtitle: 'Select the desired output types and enter your command.',
+                settingsTitle: 'Settings',
+                themeTitle: 'Theme Selection',
+                themeLight: 'Light Mode',
+                themeDark: 'Dark Mode',
+                languageTitle: 'Language Selection',
+                outputTitle: 'Output Types (Select One or More):',
+                createText: 'Generate Text',
+                createSpeech: 'Generate Speech (TTS)',
+                createImage: 'Generate Image',
+                promptLabel: 'Enter Your Command:',
+                promptPlaceholder: "E.g.: Write a short story about a 'cute cat floating in space'.",
+                generateButton: 'Start Creation',
+                processingText: 'Processing...',
+                errorNoPrompt: 'Please enter a command.',
+                errorNoOutput: 'Please select at least one output type.',
+                resultsTitle: 'Results',
+                generatedTextTitle: 'Generated Text',
+                generatedSpeechTitle: 'Speech (TTS)',
+                generatedImageTitle: 'Generated Image',
+                statusGeneratingText: 'Generating Text...',
+                statusGeneratingSpeech: 'Generating Speech... Please wait.',
+                statusGeneratingImage: 'Generating Image... Please wait.',
+                statusSpeechPlaceholder: 'Audio not generated yet.',
+                statusImagePlaceholder: 'Image not generated yet.',
+                statusErrorText: 'Error: Failed to generate text. (',
+                statusErrorSpeech: 'Error: Failed to generate speech. (',
+                statusErrorImage: 'Error: Failed to generate image. (',
+                statusErrorGeneral: 'General Error: A problem occurred during the operation. ',
+                statusTextUnavailable: 'Text could not be retrieved.',
+
+                // Yeni Auth Keys
+                loginTitle: 'Login',
+                usernameLabel: 'Username',
+                usernamePlaceholder: 'Enter your username',
+                loginAction: 'Login',
+                loginButtonText: 'Login',
+                logoutButtonText: 'Logout',
+                welcomeMessage: 'Welcome,',
+                statusLoggedOut: 'Not logged in.'
+            },
+            'es': {
+                appTitle: 'Asistente de Creación Múltiple',
+                appSubtitle: 'Seleccione los tipos de salida deseados e ingrese su comando.',
+                settingsTitle: 'Configuración',
+                themeTitle: 'Selección de Tema',
+                themeLight: 'Modo Claro',
+                themeDark: 'Modo Oscuro',
+                languageTitle: 'Selección de Idioma',
+                outputTitle: 'Tipos de Salida (Seleccione Uno o Más):',
+                createText: 'Generar Texto',
+                createSpeech: 'Generar Voz (TTS)',
+                createImage: 'Generar Imagen',
+                promptLabel: 'Ingrese Su Comando:',
+                promptPlaceholder: "Ej.: Escribe una historia corta sobre un 'lindo gato flotando en el espacio'.",
+                generateButton: 'Iniciar Creación',
+                processingText: 'Procesando...',
+                errorNoPrompt: 'Por favor ingrese un comando.',
+                errorNoOutput: 'Por favor seleccione al menos un tipo de salida.',
+                resultsTitle: 'Resultados',
+                generatedTextTitle: 'Texto Generado',
+                generatedSpeechTitle: 'Voz (TTS)',
+                generatedImageTitle: 'Imagen Generada',
+                statusGeneratingText: 'Generando Texto...',
+                statusGeneratingSpeech: 'Generando Voz... Por favor espere.',
+                statusGeneratingImage: 'Generando Imagen... Por favor espere.',
+                statusSpeechPlaceholder: 'Audio aún no generado.',
+                statusImagePlaceholder: 'Imagen aún no generado.',
+                statusErrorText: 'Error: Falló al generar texto. (',
+                statusErrorSpeech: 'Error: Falló al generar voz. (',
+                statusErrorImage: 'Error: Falló al generar imagen. (',
+                statusErrorGeneral: 'Error General: Ocurrió un problema durante la operación. ',
+                statusTextUnavailable: 'No se pudo recuperar el texto.',
+
+                // Yeni Auth Keys
+                loginTitle: 'Iniciar Sesión',
+                usernameLabel: 'Nombre de Usuario',
+                usernamePlaceholder: 'Ingrese su nombre de usuario',
+                loginAction: 'Iniciar Sesión',
+                loginButtonText: 'Iniciar Sesión',
+                logoutButtonText: 'Cerrar Sesión',
+                welcomeMessage: 'Bienvenido,',
+                statusLoggedOut: 'Sesión no iniciada.'
+            },
+            'de': {
+                appTitle: 'Multi-Erstellungs-Assistent',
+                appSubtitle: 'Wählen Sie die gewünschten Ausgabetypen und geben Sie Ihren Befehl ein.',
+                settingsTitle: 'Einstellungen',
+                themeTitle: 'Thema wählen',
+                themeLight: 'Heller Modus',
+                themeDark: 'Dunkler Modus',
+                languageTitle: 'Sprachauswahl',
+                outputTitle: 'Ausgabetypen (Wählen Sie einen oder mehrere):',
+                createText: 'Text generieren',
+                createSpeech: 'Sprache generieren (TTS)',
+                createImage: 'Bild generieren',
+                promptLabel: 'Geben Sie Ihren Befehl ein:',
+                promptPlaceholder: "Bsp.: Schreiben Sie eine Kurzgeschichte über eine 'niedliche Katze, die im Weltraum schwebt'.",
+                generateButton: 'Erstellung starten',
+                processingText: 'Wird verarbeitet...',
+                errorNoPrompt: 'Bitte geben Sie einen Befehl ein.',
+                errorNoOutput: 'Bitte wählen Sie mindestens einen Ausgabetyp.',
+                resultsTitle: 'Ergebnisse',
+                generatedTextTitle: 'Generierter Text',
+                generatedSpeechTitle: 'Sprache (TTS)',
+                generatedImageTitle: 'Generiertes Bild',
+                statusGeneratingText: 'Text wird generiert...',
+                statusGeneratingSpeech: 'Sprache wird generiert... Bitte warten Sie.',
+                statusGeneratingImage: 'Bild wird generiert... Bitte warten Sie.',
+                statusSpeechPlaceholder: 'Audio noch nicht generiert.',
+                statusImagePlaceholder: 'Bild noch nicht generiert.',
+                statusErrorText: 'Fehler: Texterstellung fehlgeschlagen. (',
+                statusErrorSpeech: 'Fehler: Spracherstellung fehlgeschlagen. (',
+                statusErrorImage: 'Fehler: Bilderstellung fehlgeschlagen. (',
+                statusErrorGeneral: 'Allgemeiner Fehler: Während des Vorgangs ist ein Problem aufgetreten. ',
+                statusTextUnavailable: 'Text konnte nicht abgerufen werden.',
+
+                // Yeni Auth Keys
+                loginTitle: 'Anmelden',
+                usernameLabel: 'Benutzername',
+                usernamePlaceholder: 'Geben Sie Ihren Benutzernamen ein',
+                loginAction: 'Anmelden',
+                loginButtonText: 'Anmelden',
+                logoutButtonText: 'Abmelden',
+                welcomeMessage: 'Willkommen,',
+                statusLoggedOut: 'Nicht angemeldet.'
+            },
+            'ru': {
+                appTitle: 'Мастер Множественного Творения',
+                appSubtitle: 'Выберите желаемые типы вывода и введите свою команду.',
+                settingsTitle: 'Настройки',
+                themeTitle: 'Выбор Темы',
+                themeLight: 'Светлый Режим',
+                themeDark: 'Темный Режим',
+                languageTitle: 'Выбор Языка',
+                outputTitle: 'Типы Вывода (Выберите Один или Несколько):',
+                createText: 'Создать Текст',
+                createSpeech: 'Создать Речь (TTS)',
+                createImage: 'Создать Изображение',
+                promptLabel: 'Введите Вашу Команду:',
+                promptPlaceholder: "Пример: Напишите короткий рассказ о 'милом коте, плавающем в космосе'.",
+                generateButton: 'Начать Творение',
+                processingText: 'Обработка...',
+                errorNoPrompt: 'Пожалуйста, введите команду.',
+                errorNoOutput: 'Пожалуйста, выберите хотя бы один тип вывода.',
+                resultsTitle: 'Результаты',
+                generatedTextTitle: 'Сгенерированный Текст',
+                generatedSpeechTitle: 'Речь (TTS)',
+                generatedImageTitle: 'Сгенерированное Изображение',
+                statusGeneratingText: 'Генерация Текста...',
+                statusGeneratingSpeech: 'Генерация Речи... Пожалуйста, подождите.',
+                statusGeneratingImage: 'Генерация Изображения... Пожалуйста, подождите.',
+                statusSpeechPlaceholder: 'Аудио еще не сгенерировано.',
+                statusImagePlaceholder: 'Изображение еще не сгенерировано.',
+                statusErrorText: 'Ошибка: Не удалось сгенерировать текст. (',
+                statusErrorSpeech: 'Ошибка: Не удалось сгенерировать речь. (',
+                statusErrorImage: 'Ошибка: Не удалось сгенерировать изображение. (',
+                statusErrorGeneral: 'Общая Ошибка: Во время операции произошла проблема. ',
+                statusTextUnavailable: 'Текст не может быть получен.',
+
+                // Yeni Auth Keys
+                loginTitle: 'Войти',
+                usernameLabel: 'Имя Пользователя',
+                usernamePlaceholder: 'Введите ваше имя пользователя',
+                loginAction: 'Войти',
+                loginButtonText: 'Войти',
+                logoutButtonText: 'Выйти',
+                welcomeMessage: 'Добро пожаловать,',
+                statusLoggedOut: 'Не авторизован.'
+            }
+        };
+
+        let currentLanguage = localStorage.getItem('appLanguage') || 'tr';
+        let currentTheme = localStorage.getItem('appTheme') || 'light';
+
+        function updateUIForLanguage(lang) {
+            const t = translations[lang];
+
+            // 1. data-i18n-key ile etiketleri güncelle
+            document.querySelectorAll('[data-i18n-key]').forEach(el => {
+                const key = el.getAttribute('data-i18n-key');
+                if (t[key]) {
+                    el.textContent = t[key];
+                }
+            });
+
+            // 2. data-i18n-placeholder ile placeholder'ları güncelle
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (t[key]) {
+                    el.placeholder = t[key];
+                }
+            });
+
+            // 3. Aktif dil butonunu işaretle
+            document.querySelectorAll('.lang-button').forEach(button => {
+                button.classList.remove('active');
+                if (button.getAttribute('data-lang') === lang) {
+                    button.classList.add('active');
+                }
+            });
+            
+            // 4. Başlığı güncelle
+            document.title = t.appTitle;
+
+            currentLanguage = lang;
+            localStorage.setItem('appLanguage', lang);
+            updateAuthUI(); // Dil değiştiğinde auth metinlerini de güncelle
+        }
+
+        function buildLanguageSelector() {
+            const selector = document.getElementById('languageSelector');
+            selector.innerHTML = '';
+            
+            Object.keys(LANGUAGES).forEach(code => {
+                const button = document.createElement('button');
+                button.setAttribute('data-lang', code);
+                button.classList.add('lang-button', 'py-2', 'px-4', 'rounded-lg', 'text-sm', 'font-medium', 'shadow-sm');
+                button.textContent = LANGUAGES[code];
+                button.onclick = () => updateUIForLanguage(code);
+                
+                selector.appendChild(button);
+            });
+        }
+
+        // --- Tema Fonksiyonları ---
+        window.setTheme = function(theme) {
+            const htmlEl = document.documentElement;
+            if (theme === 'dark') {
+                htmlEl.classList.add('dark');
+                document.getElementById('themeDark').classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+                document.getElementById('themeLight').classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+            } else {
+                htmlEl.classList.remove('dark');
+                document.getElementById('themeLight').classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+                document.getElementById('themeDark').classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+            }
+            currentTheme = theme;
+            localStorage.setItem('appTheme', theme);
+        }
+
+        function initializeTheme() {
+            window.setTheme(currentTheme);
+        }
+
+        // --- Ayarlar Paneli Fonksiyonu ---
+        window.toggleSettings = function() {
+            const panel = document.getElementById('settingsPanel');
+            const overlay = document.getElementById('settingsOverlay');
+            
+            panel.classList.toggle('open');
+            overlay.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('open'), 10); // Overlay geçişini başlat
+            } else {
+                overlay.classList.remove('open');
+                setTimeout(() => overlay.classList.add('hidden'), 300); // Geçişten sonra gizle
+            }
+        }
+
+        // --- UI Elementleri ---
+        const promptInput = document.getElementById('prompt');
+        const checkText = document.getElementById('checkText');
+        const checkSpeech = document.getElementById('checkSpeech');
+        const checkImage = document.getElementById('checkImage');
+        const generateButton = document.getElementById('generateButton');
+        const buttonText = document.getElementById('buttonText');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+
+        const textOutputContainer = document.getElementById('textOutputContainer');
+        const textOutput = document.getElementById('textOutput');
+        const speechOutputContainer = document.getElementById('speechOutputContainer');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const speechPlaceholder = document.getElementById('speechPlaceholder');
+        const imageOutputContainer = document.getElementById('imageOutputContainer');
+        const generatedImage = document.getElementById('generatedImage');
+        const imagePlaceholder = document.getElementById('imagePlaceholder');
+
+        // Sabitler
+        const API_KEY = ""; // Canvas ortamında otomatik sağlanacaktır.
+
+        // --- TTS Yardımcı Fonksiyonları ---
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcmData, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcmData.length * 2);
+            const view = new DataView(buffer);
+
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + pcmData.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); // PCM format
+            view.setUint16(22, 1, true); // 1 kanal
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true); // Byte rate
+            view.setUint16(32, 2, true); // Blok hizalaması (2 byte, 16 bit stereo yok)
+            view.setUint16(34, 16, true); // Örnek başına bit (16 bit)
+            writeString(view, 36, 'data');
+            view.setUint32(40, pcmData.length * 2, true);
+
+            let offset = 44;
+            for (let i = 0; i < pcmData.length; i++) {
+                view.setInt16(offset, pcmData[i], true); // Signed 16-bit
+                offset += 2;
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        // --- API Çağrı Fonksiyonları ---
+
+        function setStatus(text, isError = false) {
+            errorMessage.textContent = text;
+            if (isError) {
+                errorMessage.classList.remove('hidden');
+                errorMessage.classList.remove('text-green-600', 'dark:text-green-400');
+                errorMessage.classList.add('text-red-600', 'dark:text-red-400');
+            } else {
+                errorMessage.classList.remove('text-red-600', 'dark:text-red-400');
+                errorMessage.classList.add('text-green-600', 'dark:text-green-400');
+                errorMessage.classList.remove('hidden');
+            }
+        }
+
+        function setLoading(isLoading) {
+            generateButton.disabled = isLoading;
+            const t = translations[currentLanguage];
+            if (isLoading) {
+                buttonText.textContent = t.processingText;
+                loadingIndicator.classList.remove('hidden');
+                errorMessage.classList.add('hidden');
+            } else {
+                buttonText.textContent = t.generateButton;
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        function resetOutput() {
+            textOutputContainer.classList.add('hidden');
+            speechOutputContainer.classList.add('hidden');
+            imageOutputContainer.classList.add('hidden');
+
+            textOutput.textContent = '';
+            
+            audioPlayer.classList.add('hidden');
+            audioPlayer.src = '';
+            speechPlaceholder.classList.remove('hidden');
+
+            generatedImage.classList.add('hidden');
+            generatedImage.src = '';
+            imagePlaceholder.classList.remove('hidden');
+
+            errorMessage.classList.add('hidden');
+        }
+
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (attempt === maxRetries - 1) throw error;
+                    // Exponential backoff
+                    const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        async function generateText(prompt) {
+            const t = translations[currentLanguage];
+            setStatus(t.statusGeneratingText);
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
+            const systemPrompt = `You are a creative assistant. Based on the user's prompt, generate a creative text response. The response language must be ${LANGUAGES[currentLanguage]}.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text || t.statusTextUnavailable;
+            textOutput.textContent = text;
+            textOutputContainer.classList.remove('hidden');
+            return text;
+        }
+
+        async function generateSpeech(text) {
+            const t = translations[currentLanguage];
+            setStatus(t.statusGeneratingSpeech);
+
+            const voiceName = currentLanguage === 'tr' ? 'Kore' : 'Zephyr'; // Örnek olarak Kore veya Zephyr
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${API_KEY}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: text }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            const part = result?.candidates?.[0]?.content?.parts?.[0];
+            const audioData = part?.inlineData?.data;
+            const mimeType = part?.inlineData?.mimeType;
+
+            if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 24000;
+                
+                const pcmData = base64ToArrayBuffer(audioData);
+                const pcm16 = new Int16Array(pcmData);
+                const wavBlob = pcmToWav(pcm16, sampleRate);
+                
+                audioPlayer.src = URL.createObjectURL(wavBlob);
+                audioPlayer.classList.remove('hidden');
+                speechPlaceholder.classList.add('hidden');
+                speechOutputContainer.classList.remove('hidden');
+            } else {
+                throw new Error("TTS response missing audio data.");
+            }
+        }
+
+        async function generateImage(prompt) {
+            const t = translations[currentLanguage];
+            setStatus(t.statusGeneratingImage);
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
+            const payload = { 
+                instances: [{ prompt: prompt }], 
+                parameters: { "sampleCount": 1 } 
+            };
+
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
+
+            if (base64Data) {
+                generatedImage.src = `data:image/png;base64,${base64Data}`;
+                generatedImage.classList.remove('hidden');
+                imagePlaceholder.classList.add('hidden');
+                imageOutputContainer.classList.remove('hidden');
+            } else {
+                throw new Error("Image generation failed or returned no data.");
+            }
+        }
+
+        // --- Ana İşlem Akışı ---
+        window.processRequest = async function() {
+            if (!currentUsername) {
+                 showLoginModal();
+                 return;
+            }
+
+            resetOutput();
+            const t = translations[currentLanguage];
+            const prompt = promptInput.value.trim();
+            const shouldGenerateText = checkText.checked;
+            const shouldGenerateSpeech = checkSpeech.checked;
+            const shouldGenerateImage = checkImage.checked;
+
+            if (!prompt) {
+                setStatus(t.errorNoPrompt, true);
+                return;
+            }
+            if (!shouldGenerateText && !shouldGenerateSpeech && !shouldGenerateImage) {
+                setStatus(t.errorNoOutput, true);
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                let generatedTextContent = null;
+                let textError = null;
+
+                // 1. Metin Oluşturma (Gerekliyse)
+                if (shouldGenerateText || shouldGenerateSpeech) {
+                    try {
+                        generatedTextContent = await generateText(prompt);
+                    } catch (e) {
+                        textError = e;
+                        console.error('Metin Oluşturma Hatası:', e);
+                        setStatus(t.statusErrorText + 'Metin Hatası)', true);
+                    }
+                }
+                
+                // 2. Seslendirme (Metin başarıyla oluşturulduysa veya kullanıcı sadece Ses istedi ve metin alamadıysa)
+                if (shouldGenerateSpeech) {
+                    if (generatedTextContent) {
+                        try {
+                            await generateSpeech(generatedTextContent);
+                        } catch (e) {
+                            console.error('Seslendirme Hatası:', e);
+                            setStatus(t.statusErrorSpeech + 'TTS Hatası)', true);
+                        }
+                    } else if (!shouldGenerateText && !textError) {
+                        // Kullanıcı sadece TTS istedi ama metin oluşturma kapalıydı. TTS için yeni bir metin oluşturulmasını talep edebiliriz.
+                        // Ancak, mevcut yapı TTS'in Text'e bağlı olmasını bekler. Metin yoksa atla.
+                        console.warn("TTS istendi ancak metin içeriği mevcut değil veya oluşturulamadı. TTS atlanıyor.");
+                    }
+                }
+
+                // 3. Görsel Oluşturma
+                if (shouldGenerateImage) {
+                    try {
+                        // Görsel oluşturma için orijinal prompt kullanılır
+                        await generateImage(prompt);
+                    } catch (e) {
+                        console.error('Görsel Oluşturma Hatası:', e);
+                        setStatus(t.statusErrorImage + 'Görsel Hatası)', true);
+                    }
+                }
+
+                // Tüm işlemler tamamlandıktan sonra başarılı durumu sıfırla
+                setLoading(false);
+                errorMessage.classList.add('hidden');
+
+            } catch (error) {
+                console.error("İşlem sırasında genel hata:", error);
+                setStatus(t.statusErrorGeneral + error.message, true);
+                setLoading(false);
+            }
+        }
+
+        // --- Başlatma ---
+        function initApp() {
+            buildLanguageSelector();
+            initializeTheme();
+            updateUIForLanguage(currentLanguage); // UI'ı başlat
+            checkAuthStatus(); // Giriş durumunu kontrol et
+            lucide.createIcons(); // Lucide ikonlarını başlat
+        }
+
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
