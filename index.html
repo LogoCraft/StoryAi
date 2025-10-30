@@ -3,1051 +3,682 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n-key="appTitle">Çoklu Yaratım Aracı</title>
-    <!-- Tailwind CSS CDN --><script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons for Settings --><script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <!-- Inter Font --><style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        
-        /* Tema geçişleri için temel stil ve gövde rengi */
+    <title>Gelişmiş PDF Belge Oluşturucu ve Biçimlendirici</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <style>
         body {
             font-family: 'Inter', sans-serif;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        
-        /* Hafif ve Koyu Mod Renkleri */
-        body {
             background-color: #f7f7f7;
-            color: #1f2937; /* Gray-800 */
-        }
-        .dark body {
-            background-color: #111827; /* Gray-900 */
-            color: #f3f4f6; /* Gray-100 */
-        }
-        .container {
-            max-width: 1000px;
-            background-color: #ffffff;
-            transition: background-color 0.3s;
-        }
-        .dark .container {
-            background-color: #1f2937; /* Gray-800 */
-        }
-        /* İkincil öğeler (Seçenekler kutusu, çıktı kutusu) */
-        .secondary-bg {
-            background-color: #f3f4f6; /* Gray-100 */
-            border-color: #e5e7eb; /* Gray-200 */
-        }
-        .dark .secondary-bg {
-            background-color: #374151; /* Gray-700 */
-            border-color: #4b5563; /* Gray-600 */
-        }
-        /* Girişler */
-        .input-style {
-            background-color: #ffffff;
-            border-color: #d1d5db;
-            color: #1f2937;
-        }
-        .dark .input-style {
-            background-color: #1f2937;
-            border-color: #4b5563;
-            color: #f3f4f6;
-        }
-
-        .loading-spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #4f46e5;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        .dark .loading-spinner {
-            border-color: rgba(255, 255, 255, 0.1);
-            border-left-color: #a5b4fc; /* Indigo-300 */
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Ayarlar paneli stilleri */
-        .settings-panel, .login-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 320px;
-            height: 100%;
-            background-color: #ffffff;
-            z-index: 50;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .dark .settings-panel, .dark .login-modal {
-            background-color: #1f2937; /* Gray-800 */
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
-        }
-        .settings-panel.open {
-            transform: translateX(0);
-        }
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 40;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-        }
-        .overlay.open {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        /* Giriş Modalı Stilleri */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.75);
             display: flex;
             justify-content: center;
-            align-items: center;
-            z-index: 60;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
+            align-items: flex-start;
+            min-height: 100vh;
+            overflow-x: hidden; /* Sidebar geçişi sırasında yatay kaydırmayı engelle */
         }
-        .modal-overlay.open {
-            opacity: 1;
-            visibility: visible;
+        /* Biçimlendirilebilir Alan Stili */
+        #editor[contenteditable="true"] {
+            min-height: 300px;
+            /* Yazıların biçimlendirmesini göstermek için */
+            line-height: 1.6;
+            font-size: 11pt;
+            cursor: text;
         }
-        .modal-content {
-            background-color: white;
-            padding: 3rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            width: 90%;
-            max-width: 400px;
-        }
-        .dark .modal-content {
-            background-color: #1f2937;
-        }
-
-        /* Dil seçimi tuşları */
-        .lang-button {
-            transition: background-color 0.2s, color 0.2s;
-            border: 1px solid #d1d5db;
-        }
-        .dark .lang-button {
-            border-color: #4b5563;
-        }
-        .lang-button.active {
-            background-color: #4f46e5;
+        /* Sidebar Stili */
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 300px;
+            max-width: 80vw; /* Mobil uyumluluk */
+            background-color: #1f2937; /* Koyu Gri */
             color: white;
-            border-color: #4f46e5;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 50;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+        }
+        #sidebar.open {
+            transform: translateX(0);
+        }
+        /* PDF içeriğini yakalamak için gizli div stili (GİZLİ!) */
+        #pdf-capture-area {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            z-index: -10;
+            width: 210mm; /* A4 Genişliği */
+            min-height: 297mm; /* A4 Yüksekliği */
+            box-sizing: border-box;
+            background-color: white;
+            padding: 20mm; /* A4 Kenar Boşluğu */
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+        /* Hamburger butonu konumu */
+        #menu-button {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 60;
         }
     </style>
+    <!-- JS PDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- HTML2Canvas (PDF'e Biçimlendirilmiş HTML'i aktarmak için) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Crypto JS (Gerekmese de önceki koddan taşındı) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
-<body class="p-4 sm:p-8">
+<body>
 
-    <!-- Giriş Modalı (LOGIN MODAL) --><div id="loginModalOverlay" class="modal-overlay">
-        <div class="modal-content text-center">
-            <h2 class="text-3xl font-extrabold text-indigo-600 mb-6" data-i18n-key="loginTitle">Giriş Yap</h2>
-            <form id="loginForm">
-                <div class="mb-6">
-                    <label for="usernameInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-left" data-i18n-key="usernameLabel">Kullanıcı Adı:</label>
-                    <input type="text" id="usernameInput" required data-i18n-placeholder="usernamePlaceholder" placeholder="Kullanıcı adınızı girin" class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm input-style">
-                </div>
-                <button type="submit" class="w-full px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300" data-i18n-key="loginAction">
-                    Giriş Yap
-                </button>
-            </form>
-        </div>
+<!-- Sol Yukarıdaki Menü Butonu -->
+<button id="menu-button" class="p-3 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+</button>
+
+<!-- Yan Gezinme Çubuğu (Sidebar) -->
+<div id="sidebar" class="p-4">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-indigo-400">Kaydedilen Belgeler</h2>
+        <button id="close-sidebar" class="p-2 text-white hover:text-indigo-400 transition duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
     </div>
-    <!-- /Giriş Modalı -->
+    
+    <!-- YENİ: Boş Belge Oluştur Butonu -->
+    <button id="new-document-button" class="w-full mb-4 py-2 px-4 bg-indigo-500 text-white font-semibold rounded-lg shadow hover:bg-indigo-600 transition duration-200">
+        Yeni Boş Belge Oluştur
+    </button>
 
-    <!-- Ayarlar Paneli ve Overlay --><div id="settingsOverlay" class="overlay hidden" onclick="toggleSettings()"></div>
+    <ul id="document-list" class="space-y-2">
+        <!-- Belgeler buraya dinamik olarak yüklenecek -->
+    </ul>
+    <p id="no-documents-message" class="text-sm text-gray-400 mt-4">Henüz kaydedilmiş belge yok.</p>
+</div>
 
-    <div id="settingsPanel" class="settings-panel p-6">
-        <div class="flex justify-between items-center pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100" data-i18n-key="settingsTitle">Ayarlar</h2>
-            <button onclick="toggleSettings()" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">
-                <i data-lucide="x" class="w-6 h-6"></i>
+<div id="app" class="w-full max-w-4xl p-4 md:p-8">
+    <header class="text-center mb-6">
+        <h1 class="text-3xl font-extrabold text-indigo-700">Biçimlendirilebilir PDF Belge Oluşturucu</h1>
+        <p class="text-gray-500 mt-1">Metninizi biçimlendirin, önizleyin ve cihazınıza kaydedin (Sınırsız Metin Alanı).</p>
+    </header>
+
+    <!-- Mesaj Kutusu -->
+    <div id="message-box" class="hidden p-3 mb-4 text-sm rounded-lg shadow-md transition-all duration-300" role="alert"></div>
+
+    <div class="bg-white p-6 rounded-xl shadow-2xl border border-gray-100">
+        
+        <!-- Biçimlendirme Araç Çubuğu -->
+        <div id="toolbar" class="flex flex-wrap gap-2 p-3 bg-gray-100 rounded-t-xl border-b border-gray-200">
+            <!-- Kalın (Bold) -->
+            <button onclick="formatText('bold')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 font-extrabold text-lg transition duration-150" title="Kalın (Bold)">
+                B
+            </button>
+            <!-- İtalik (Italic) -->
+            <button onclick="formatText('italic')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 italic font-medium text-lg transition duration-150" title="İtalik (Italic)">
+                I
+            </button>
+            <!-- Büyük Başlık (H2) -->
+            <button onclick="formatBlock('h2')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 font-bold text-base transition duration-150" title="Büyük Başlık (H2)">
+                Başlık 1
+            </button>
+             <!-- Küçük Başlık (H3) -->
+            <button onclick="formatBlock('h3')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 font-semibold text-sm transition duration-150" title="Küçük Başlık (H3)">
+                Başlık 2
+            </button>
+            <!-- Paragraf (Normal Metin) -->
+            <button onclick="formatBlock('p')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 text-sm transition duration-150" title="Normal Paragraf Metni">
+                Normal
+            </button>
+            <!-- Numaralı Liste -->
+            <button onclick="formatText('insertOrderedList')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 text-sm transition duration-150" title="Numaralı Liste">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm3 8a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-6 0a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm9 3a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-6 0a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-6 0a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm9-3a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            </button>
+            <!-- Madde İşaretli Liste -->
+            <button onclick="formatText('insertUnorderedList')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 text-sm transition duration-150" title="Madde İşaretli Liste">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1zm-3-4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm6 0a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-3-4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-3-4a1 1 0 011 1v1a1 1 0 11-2 0V7a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            </button>
+            <!-- Yatay Çizgi -->
+            <button onclick="formatText('insertHorizontalRule')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 text-sm transition duration-150" title="Yatay Çizgi">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+            </button>
+            
+            <!-- YENİ: Görselden Metin Çıkarma Butonu -->
+            <input type="file" id="image-upload" accept="image/*" class="hidden">
+            <button id="extract-text-button" class="p-2 bg-indigo-200 text-indigo-800 rounded-lg shadow-sm hover:bg-indigo-300 font-medium text-sm transition duration-150" title="Görselden Metin Çıkar (YZ)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            </button>
+
+            <!-- YENİ: Metin Çıkarma Yükleme İndikatörü -->
+            <div id="extraction-loading-indicator" class="hidden flex items-center p-2 text-indigo-700">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Metin Çıkarılıyor...
+            </div>
+        </div>
+
+        <!-- Metin Düzenleyici Alanı (ContentEditable) -->
+        <div id="editor" contenteditable="true" class="w-full p-4 border border-gray-300 rounded-b-xl focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out overflow-y-auto">
+            <h2 style="font-size: 1.5em; font-weight: bold;">PDF Belge Başlığı</h2>
+            <p>Bu alanda tüm özel karakterler (`i, ğ, ş, ə`) dahil olmak üzere, <b style="font-weight: bold;">sınırsız</b> metin yazabilirsiniz.</p>
+            <p>Yazdığınız tüm biçimlendirmeler (Başlıklar, kalın yazılar, listeler, boşluklar) PDF'e birebir yansıtılacaktır.</p>
+            <h3 style="font-size: 1.17em; font-weight: bold;">Örnek Liste:</h3>
+            <ul>
+                <li>iğde</li>
+                <li>şeftali</li>
+                <li>Əlifba</li>
+            </ul>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6">
+            <!-- PDF Oluştur, Önizle ve İndir Butonu -->
+            <button id="download-pdf" class="flex-1 bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:bg-indigo-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-400">
+                <span id="download-text">PDF Oluştur, Önizle ve İndir</span>
+                <span id="download-loading" class="hidden">PDF Hazırlanıyor... (Önizleme için Bekleyin)</span>
+            </button>
+
+            <!-- Yerel Kaydetme Butonu -->
+            <button id="save-document" class="flex-1 bg-green-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:bg-green-600 transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:bg-green-300">
+                <span id="save-text">Belgeyi Yerel Olarak Kaydet</span>
+                <span id="save-loading" class="hidden">Kaydediliyor...</span>
             </button>
         </div>
 
-        <!-- Tema Seçimi --><div class="mb-6">
-            <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-3" data-i18n-key="themeTitle">Tema Seçimi</h3>
-            <div class="flex space-x-3">
-                <button onclick="setTheme('light')" id="themeLight" class="w-full py-2 px-4 rounded-lg shadow-sm text-sm border hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <i data-lucide="sun" class="w-4 h-4 inline mr-2"></i><span data-i18n-key="themeLight">Açık Mod</span>
-                </button>
-                <button onclick="setTheme('dark')" id="themeDark" class="w-full py-2 px-4 rounded-lg shadow-sm text-sm border hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <i data-lucide="moon" class="w-4 h-4 inline mr-2"></i><span data-i18n-key="themeDark">Koyu Mod</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Dil Seçimi --><div class="mb-6">
-            <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-3" data-i18n-key="languageTitle">Dil Seçimi</h3>
-            <div id="languageSelector" class="grid grid-cols-2 gap-2">
-                <!-- Dil butonları JS tarafından oluşturulacak --></div>
-        </div>
+        <!-- Yükleme alanı artık sidebar'da listeleniyor, bu alan sadeleştirildi -->
+        <p class="text-sm text-gray-500 mt-4 text-center">Kaydettiğiniz belgelere sol yukarıdaki menüden (☰) ulaşabilirsiniz.</p>
         
-        <!-- Kullanıcı Durumu (Ayarlar içinde göster) -->
-        <div class="mt-auto pt-6 border-t border-gray-200 dark:border-gray-700">
-             <div class="flex items-center justify-between">
-                <p id="authStatusText" class="text-sm font-medium text-gray-600 dark:text-gray-300">...</p>
-                <button id="authActionButton" onclick="handleAuthAction()" class="px-3 py-1 text-sm rounded-full shadow-sm text-white bg-red-500 hover:bg-red-600 transition">
-                    <!-- Giriş Yap/Çıkış Yap metni -->
-                </button>
-             </div>
-        </div>
     </div>
-    <!-- /Ayarlar Paneli -->
+</div>
 
-    <header class="flex justify-between items-start mb-6">
-        <!-- Ayarlar Butonu --><button onclick="toggleSettings()" class="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-200">
-            <i data-lucide="settings" class="w-6 h-6"></i>
-        </button>
+<!-- GİZLİ PDF İÇERİK YAKALAMA ALANI: Biçimlendirilmiş içeriği A4 boyutunda yakalamak için -->
+<div id="pdf-capture-area"></div>
 
-        <div class="flex-grow text-center mx-4">
-            <h1 class="text-3xl font-bold mb-1" data-i18n-key="appTitle">Çoklu Yaratım Sihirbazı</h1>
-            <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n-key="appSubtitle">İstediğiniz çıktı türlerini seçin ve komutunuzu girin.</p>
-        </div>
 
-        <!-- Kullanıcı Adı veya Giriş Yap Butonu --><div class="w-10 flex justify-end">
-            <span id="userNameDisplay" class="text-indigo-600 dark:text-indigo-400 font-semibold text-sm self-center"></span>
-        </div>
-    </header>
+<script>
+    // DEPOLAMA ANAHTARI (localStorage)
+    const DOCUMENTS_KEY = 'pdf_documents_list';
+    
+    // Gemini API yapılandırması
+    const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
+    const apiKey = "";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
 
-    <!-- ANA İÇERİK (Giriş Yapılana Kadar Gizli) --><div id="mainContent" class="hidden">
-        <div class="container mx-auto p-6 md:p-10 shadow-xl rounded-2xl">
-            <!-- Seçenekler ve Komut Girişi --><div class="space-y-6">
-                <!-- Seçenekler --><div class="bg-indigo-50 dark:bg-indigo-900/30 p-5 rounded-xl border border-indigo-200 dark:border-indigo-900 transition duration-300">
-                    <p class="font-semibold text-indigo-700 dark:text-indigo-300 mb-3" data-i18n-key="outputTitle">Çıktı Türleri (Birini veya Birden Fazlasını Seçin):</p>
-                    <div class="flex flex-wrap gap-4">
-                        <label for="checkText" class="inline-flex items-center cursor-pointer secondary-bg px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition duration-200 border">
-                            <input type="checkbox" id="checkText" checked class="form-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500">
-                            <span class="ml-2 text-gray-700 dark:text-gray-200 font-medium" data-i18n-key="createText">Metin Oluşturma</span>
-                        </label>
-                        <label for="checkSpeech" class="inline-flex items-center cursor-pointer secondary-bg px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition duration-200 border">
-                            <input type="checkbox" id="checkSpeech" class="form-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500">
-                            <span class="ml-2 text-gray-700 dark:text-gray-200 font-medium" data-i18n-key="createSpeech">Seslendirme (TTS)</span>
-                        </label>
-                        <label for="checkImage" class="inline-flex items-center cursor-pointer secondary-bg px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition duration-200 border">
-                            <input type="checkbox" id="checkImage" class="form-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500">
-                            <span class="ml-2 text-gray-700 dark:text-gray-200 font-medium" data-i18n-key="createImage">Görsel Oluşturma</span>
-                        </label>
-                    </div>
-                </div>
+    // UI Elementleri
+    const editor = document.getElementById('editor');
+    const downloadPdfButton = document.getElementById('download-pdf');
+    const saveDocumentButton = document.getElementById('save-document');
+    const messageBox = document.getElementById('message-box');
+    const pdfCaptureArea = document.getElementById('pdf-capture-area');
+    const sidebar = document.getElementById('sidebar');
+    const menuButton = document.getElementById('menu-button');
+    const closeSidebarButton = document.getElementById('close-sidebar');
+    const documentList = document.getElementById('document-list');
+    const noDocumentsMessage = document.getElementById('no-documents-message');
+    const newDocumentButton = document.getElementById('new-document-button'); 
+    const imageUploadInput = document.getElementById('image-upload'); // Yeni input
+    const extractTextButton = document.getElementById('extract-text-button'); // Yeni buton
+    const extractionLoadingIndicator = document.getElementById('extraction-loading-indicator');
 
-                <!-- Komut Girişi --><div>
-                    <label for="prompt" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-i18n-key="promptLabel">Komutunuzu Girin:</label>
-                    <textarea id="prompt" rows="4" data-i18n-placeholder="promptPlaceholder" placeholder="Örn: 'Uzayda yüzen sevimli bir kedi' hakkında kısa bir hikaye yaz." class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm input-style"></textarea>
-                </div>
+    // Varsayılan boş belge içeriği (Yeni belge oluşturulurken kullanılır)
+    const DEFAULT_CONTENT = `
+        <h2 style="font-size: 1.5em; font-weight: bold;">Yeni Boş Belge</h2>
+        <p>Çalışmaya başlamak için buraya metin yazın.</p>
+    `;
+    
+    // --- EDİTÖR FONKSİYONLARI ---
 
-                <!-- İşlem Butonu --><button id="generateButton" onclick="processRequest()" class="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 transform hover:scale-[1.01]">
-                    <span id="buttonText" data-i18n-key="generateButton">Yaratımı Başlat</span>
-                    <div id="loadingIndicator" class="loading-spinner hidden ml-3"></div>
-                </button>
-                <p id="errorMessage" class="text-red-600 dark:text-red-400 text-sm mt-2 hidden text-center font-medium"></p>
-            </div>
+    // Kalın, italik, liste vb. temel komutları uygular
+    window.formatText = function(command) {
+        document.execCommand(command, false, null);
+        editor.focus();
+    }
 
-            <!-- Sonuç Alanı --><div id="resultsArea" class="mt-10 border-t pt-8 space-y-8 border-gray-200 dark:border-gray-700">
-                <h2 class="text-2xl font-bold text-center" data-i18n-key="resultsTitle">Sonuçlar</h2>
+    // Başlık (H2, H3, P) gibi blok formatlarını uygular
+    window.formatBlock = function(tag) {
+        document.execCommand('formatBlock', false, tag);
+        editor.focus();
+    }
 
-                <!-- Metin Çıktısı --><div id="textOutputContainer" class="hidden">
-                    <h3 class="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700" data-i18n-key="generatedTextTitle">Oluşturulan Metin</h3>
-                    <div id="textOutput" class="secondary-bg p-5 rounded-lg border whitespace-pre-wrap leading-relaxed min-h-[100px]"></div>
-                </div>
-
-                <!-- Seslendirme Çıktısı --><div id="speechOutputContainer" class="hidden">
-                    <h3 class="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700" data-i18n-key="generatedSpeechTitle">Seslendirme (TTS)</h3>
-                    <div class="flex items-center space-x-4">
-                        <audio id="audioPlayer" controls class="w-full hidden rounded-full shadow-md"></audio>
-                        <p id="speechPlaceholder" class="text-gray-500 dark:text-gray-400" data-i18n-key="statusSpeechPlaceholder">Ses henüz oluşturulmadı.</p>
-                    </div>
-                </div>
-
-                <!-- Görsel Çıktısı --><div id="imageOutputContainer" class="hidden">
-                    <h3 class="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700" data-i18n-key="generatedImageTitle">Oluşturulan Görsel</h3>
-                    <div id="imageOutput" class="flex justify-center items-center p-4 secondary-bg rounded-lg border">
-                        <img id="generatedImage" src="" alt="Oluşturulan Görsel" class="w-full max-w-lg h-auto rounded-lg shadow-xl hidden">
-                        <p id="imagePlaceholder" class="text-gray-500 dark:text-gray-400" data-i18n-key="statusImagePlaceholder">Görsel henüz oluşturulmadı.</p>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
-    <!-- /ANA İÇERİK -->
-
-    <script>
-        // --- AUTH & LOCALSTORAGE BAŞLANGIÇ ---
-        let currentUsername = null;
-
-        function checkAuthStatus() {
-            // Kullanıcı durumunu localStorage'dan kontrol et
-            currentUsername = localStorage.getItem('appUsername');
-            updateAuthUI();
-        }
-
-        function updateAuthUI() {
-            const t = translations[currentLanguage];
-            const mainContent = document.getElementById('mainContent');
-            const userNameDisplay = document.getElementById('userNameDisplay');
-            const authStatusText = document.getElementById('authStatusText');
-            const authActionButton = document.getElementById('authActionButton');
-
-            if (currentUsername) {
-                // Giriş yapılmış
-                userNameDisplay.textContent = currentUsername;
-                authStatusText.innerHTML = `${t.welcomeMessage} <span class="text-indigo-500 dark:text-indigo-400 font-bold">${currentUsername}</span>`;
-                authActionButton.textContent = t.logoutButtonText;
-                authActionButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                authActionButton.classList.add('bg-red-500', 'hover:bg-red-600');
-                mainContent.classList.remove('hidden');
-                document.getElementById('loginModalOverlay').classList.remove('open');
-            } else {
-                // Çıkış yapılmış
-                userNameDisplay.textContent = '';
-                authStatusText.textContent = t.statusLoggedOut;
-                authActionButton.textContent = t.loginButtonText;
-                authActionButton.classList.remove('bg-red-500', 'hover:bg-red-600');
-                authActionButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                mainContent.classList.add('hidden');
-                showLoginModal();
+    // Editörü temizler ve varsayılan boş içeriği yükler
+    window.createNewDocument = function() {
+        if (editor.innerHTML.trim() !== DEFAULT_CONTENT.trim() && editor.innerHTML.trim() !== '') {
+            // confirm() yerine custom modal kullanılması gerektiği için, basit bir onay mesajı veriyoruz.
+            if (!confirm('Kaydedilmemiş değişiklikleriniz kaybolacak. Yeni bir boş belge açmak istediğinizden emin misiniz?')) {
+                return;
             }
         }
+        editor.innerHTML = DEFAULT_CONTENT;
+        showMessage('Yeni boş belge oluşturuldu.', 'info');
+        sidebar.classList.remove('open');
+        editor.focus();
+    }
 
-        function showLoginModal() {
-            // Giriş modalını göster
-            document.getElementById('loginModalOverlay').classList.add('open');
-            document.getElementById('usernameInput').focus();
+    // --- YEREL DEPOLAMA (localStorage) FONKSİYONLARI ---
+
+    // Yerel depolamadan tüm belgeleri yükler
+    function loadLocalDocuments() {
+        try {
+            const data = localStorage.getItem(DOCUMENTS_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error("Yerel belgeler yüklenemedi:", e);
+            return [];
+        }
+    }
+
+    // Belgeleri yerel depolamaya kaydeder
+    function saveLocalDocuments(documents) {
+        try {
+            localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(documents));
+        } catch (e) {
+            console.error("Yerel belgeler kaydedilemedi:", e);
+            showMessage("Kaydetme işlemi başarısız oldu. Tarayıcınızın depolama alanı dolmuş olabilir.", 'error');
+        }
+    }
+    
+    // Metni Yerel Olarak Kaydet
+    function saveDocument() {
+        const contentHtml = editor.innerHTML.trim();
+        if (!contentHtml || contentHtml === DEFAULT_CONTENT.trim()) {
+            showMessage("Lütfen kaydetmek için içerik girin veya mevcut içeriği değiştirin.", 'warning');
+            return;
         }
 
-        window.login = function(username) {
-            // Kullanıcı adı kaydet ve UI'ı güncelle
-            localStorage.setItem('appUsername', username);
-            currentUsername = username;
-            updateAuthUI();
-        }
+        document.getElementById('save-text').classList.add('hidden');
+        document.getElementById('save-loading').classList.remove('hidden');
+        saveDocumentButton.disabled = true;
 
-        window.logout = function() {
-            // Kullanıcı adı sil ve UI'ı güncelle
-            localStorage.removeItem('appUsername');
-            currentUsername = null;
-            updateAuthUI();
-            window.toggleSettings(); // Ayarlar panelini kapat
-        }
+        try {
+            const documents = loadLocalDocuments();
+            // Basit bir başlık oluştur
+            const titleMatch = contentHtml.match(/<h[1-6].*?>(.*?)<\/h[1-6]>|<p>(.{1,30})<\/p>/i);
+            const defaultTitle = new Date().toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });
+            let title = defaultTitle;
 
-        window.handleAuthAction = function() {
-            // Ayarlar panelindeki butona tıklandığında (Çıkış Yap/Giriş Yap)
-            if (currentUsername) {
-                window.logout();
-            } else {
-                window.toggleSettings(); // Ayarlar panelini kapat
-                showLoginModal();
+            if (titleMatch) {
+                // HTML etiketlerini temizle
+                title = titleMatch[1] || titleMatch[2];
+                title = title.replace(/<[^>]*>?/gm, '').trim() || defaultTitle;
+                // Başlık 50 karakterden uzunsa kısalt
+                if (title.length > 50) {
+                    title = title.substring(0, 50) + '...';
+                }
             }
+
+            const docId = 'DOC-' + Date.now(); 
+
+            const newDocument = {
+                id: docId,
+                title: title,
+                content: contentHtml, 
+                createdAt: new Date().toISOString()
+            };
+
+            documents.unshift(newDocument); // Yeni belgeyi listenin başına ekle
+            saveLocalDocuments(documents);
+            renderSidebar(); // Sidebar'ı güncelle
+            
+            showMessage(`Belge ("${title}") yerel olarak kaydedildi!`, 'success');
+        } catch (error) {
+            console.error("Yerel kaydetme hatası:", error);
+            showMessage("Belge kaydedilirken bir hata oluştu: " + error.message, 'error');
+        } finally {
+            document.getElementById('save-text').classList.remove('hidden');
+            document.getElementById('save-loading').classList.add('hidden');
+            saveDocumentButton.disabled = false;
+        }
+    }
+    
+    // Sidebar'daki bir belgeyi editöre yükler
+    function loadDocumentById(docId) {
+        const documents = loadLocalDocuments();
+        const document = documents.find(doc => doc.id === docId);
+
+        if (document) {
+            editor.innerHTML = document.content;
+            showMessage(`Belge ("${document.title}") yüklendi.`, 'success');
+            sidebar.classList.remove('open'); // Yüklendikten sonra sidebar'ı kapat
+        } else {
+            showMessage("Bu kimliğe ait bir belge bulunamadı.", 'error');
+        }
+    }
+    
+    // Sidebar'daki bir belgeyi siler
+    function deleteDocument(docId) {
+        let documents = loadLocalDocuments();
+        const initialLength = documents.length;
+        
+        // Silme işlemi
+        documents = documents.filter(doc => doc.id !== docId);
+        
+        if (documents.length < initialLength) {
+            saveLocalDocuments(documents);
+            renderSidebar();
+            showMessage("Belge başarıyla silindi.", 'success');
+        } else {
+             showMessage("Belge bulunamadı veya silinemedi.", 'error');
+        }
+    }
+
+    // --- SİDEBAR FONKSİYONLARI ---
+
+    // Sidebar'ı dinamik olarak oluşturur
+    function renderSidebar() {
+        const documents = loadLocalDocuments();
+        documentList.innerHTML = ''; 
+
+        if (documents.length === 0) {
+            noDocumentsMessage.classList.remove('hidden');
+            return;
         }
 
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const username = document.getElementById('usernameInput').value.trim();
-            if (username) {
-                window.login(username);
-            }
+        noDocumentsMessage.classList.add('hidden');
+
+        documents.forEach(doc => {
+            const li = document.createElement('li');
+            li.className = "flex justify-between items-center bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition cursor-pointer";
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.className = "text-sm text-white truncate flex-1 pr-2";
+            titleSpan.textContent = doc.title;
+            titleSpan.onclick = () => loadDocumentById(doc.id);
+
+            // Silme butonu
+            const deleteButton = document.createElement('button');
+            // confirm() yerine custom modal kullanılması gerektiği için, burada da basit bir onay mesajı veriyoruz.
+            deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-400 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3" /></svg>';
+            deleteButton.className = "ml-2 p-1 rounded hover:bg-gray-500";
+            deleteButton.title = "Sil";
+            deleteButton.onclick = (e) => {
+                e.stopPropagation(); // li tıklamasını engelle
+                if (confirm('Bu belgeyi yerel depolamadan kalıcı olarak silmek istediğinizden emin misiniz?')) {
+                    deleteDocument(doc.id);
+                }
+            };
+
+            li.appendChild(titleSpan);
+            li.appendChild(deleteButton);
+            documentList.appendChild(li);
         });
-        // --- AUTH & LOCALSTORAGE BİTİŞ ---
+    }
 
-
-        // --- Ayarlar ve i18n ---
-        const LANGUAGES = {
-            'tr': 'Türkçe',
-            'az': 'Azərbaycanca',
-            'en': 'English',
-            'es': 'Español',
-            'de': 'Deutsch',
-            'ru': 'Русский'
-        };
-
-        // Çeviri Haritası
-        const translations = {
-            'tr': {
-                appTitle: 'Çoklu Yaratım Sihirbazı',
-                appSubtitle: 'İstediğiniz çıktı türlerini seçin ve komutunuzu girin.',
-                settingsTitle: 'Ayarlar',
-                themeTitle: 'Tema Seçimi',
-                themeLight: 'Açık Mod',
-                themeDark: 'Koyu Mod',
-                languageTitle: 'Dil Seçimi',
-                outputTitle: 'Çıktı Türleri (Birini veya Birden Fazlasını Seçin):',
-                createText: 'Metin Oluşturma',
-                createSpeech: 'Seslendirme (TTS)',
-                createImage: 'Görsel Oluşturma',
-                promptLabel: 'Komutunuzu Girin:',
-                promptPlaceholder: "Örn: 'Uzayda yüzen sevimli bir kedi' hakkında kısa bir hikaye yaz.",
-                generateButton: 'Yaratımı Başlat',
-                processingText: 'İşleniyor...',
-                errorNoPrompt: 'Lütfen bir komut girin.',
-                errorNoOutput: 'Lütfen en az bir çıktı türü seçin.',
-                resultsTitle: 'Sonuçlar',
-                generatedTextTitle: 'Oluşturulan Metin',
-                generatedSpeechTitle: 'Seslendirme (TTS)',
-                generatedImageTitle: 'Oluşturulan Görsel',
-                statusGeneratingText: 'Metin Oluşturuluyor...',
-                statusGeneratingSpeech: 'Seslendiriliyor... Lütfen bekleyin.',
-                statusGeneratingImage: 'Görsel Oluşturuluyor... Lütfen bekleyin.',
-                statusSpeechPlaceholder: 'Ses henüz oluşturulmadı.',
-                statusImagePlaceholder: 'Görsel henüz oluşturulmadı.',
-                statusErrorText: 'Hata: Metin oluşturulamadı. (',
-                statusErrorSpeech: 'Hata: Seslendirme yapılamadı. (',
-                statusErrorImage: 'Hata: Görsel oluşturulamadı. (',
-                statusErrorGeneral: 'Genel Hata: İşlem sırasında bir sorun oluştu. ',
-                statusTextUnavailable: 'Metin alınamadı.',
-
-                // Yeni Auth Keys
-                loginTitle: 'Giriş Yap',
-                usernameLabel: 'Kullanıcı Adı',
-                usernamePlaceholder: 'Kullanıcı adınızı girin',
-                loginAction: 'Giriş Yap',
-                loginButtonText: 'Giriş Yap',
-                logoutButtonText: 'Çıkış Yap',
-                welcomeMessage: 'Hoş geldiniz,',
-                statusLoggedOut: 'Giriş yapılmadı.'
-            },
-            'az': {
-                appTitle: 'Çoxfunksiyalı Yaradıcılıq Sihirbazı',
-                appSubtitle: 'İstədiyiniz çıxış növlərini seçin və əmrinizi daxil edin.',
-                settingsTitle: 'Tənzimləmələr',
-                themeTitle: 'Mövzu Seçimi',
-                themeLight: 'İşıqlı Rejim',
-                themeDark: 'Tünd Rejim',
-                languageTitle: 'Dil Seçimi',
-                outputTitle: 'Çıxış Növləri (Birini və ya Bir Neçəsini Seçin):',
-                createText: 'Mətn Yaratma',
-                createSpeech: 'Səsləndirmə (TTS)',
-                createImage: 'Görsel Yaratma',
-                promptLabel: 'Əmrinizi Daxil Edin:',
-                promptPlaceholder: "Nümunə: 'Kosmosda üzən şirin pişik' haqqında qısa hekayə yaz.",
-                generateButton: 'Yaratmağa Başla',
-                processingText: 'İşlənir...',
-                errorNoPrompt: 'Zəhmət olmasa bir əmr daxil edin.',
-                errorNoOutput: 'Zəhmət olmasa ən azı bir çıxış növü seçin.',
-                resultsTitle: 'Nəticələr',
-                generatedTextTitle: 'Yaradılan Mətn',
-                generatedSpeechTitle: 'Səsləndirmə (TTS)',
-                generatedImageTitle: 'Yaradılan Görsəl',
-                statusGeneratingText: 'Mətn Yaradılır...',
-                statusGeneratingSpeech: 'Səsləndirilir... Zəhmət olmasa gözləyin.',
-                statusGeneratingImage: 'Görsəl Yaradılır... Zəhmət olmasa gözləyin.',
-                statusSpeechPlaceholder: 'Səs hələ yaradılmayıb.',
-                statusImagePlaceholder: 'Görsəl hələ yaradılmayıb.',
-                statusErrorText: 'Xəta: Mətn yaradıla bilmədi. (',
-                statusErrorSpeech: 'Xəta: Səsləndirmə edilə bilmədi. (',
-                statusErrorImage: 'Xəta: Görsəl yaradıla bilmədi. (',
-                statusErrorGeneral: 'Ümumi Xəta: Əməliyyat zamanı bir problem yarandı. ',
-                statusTextUnavailable: 'Mətn əldə edilmədi.',
-
-                // Yeni Auth Keys
-                loginTitle: 'Giriş Et',
-                usernameLabel: 'İstifadəçi Adı',
-                usernamePlaceholder: 'İstifadəçi adınızı daxil edin',
-                loginAction: 'Giriş Et',
-                loginButtonText: 'Giriş Et',
-                logoutButtonText: 'Çıxış Et',
-                welcomeMessage: 'Xoş gəlmisiniz,',
-                statusLoggedOut: 'Giriş edilmədi.'
-            },
-            'en': {
-                appTitle: 'Multi-Creation Wizard',
-                appSubtitle: 'Select the desired output types and enter your command.',
-                settingsTitle: 'Settings',
-                themeTitle: 'Theme Selection',
-                themeLight: 'Light Mode',
-                themeDark: 'Dark Mode',
-                languageTitle: 'Language Selection',
-                outputTitle: 'Output Types (Select One or More):',
-                createText: 'Generate Text',
-                createSpeech: 'Generate Speech (TTS)',
-                createImage: 'Generate Image',
-                promptLabel: 'Enter Your Command:',
-                promptPlaceholder: "E.g.: Write a short story about a 'cute cat floating in space'.",
-                generateButton: 'Start Creation',
-                processingText: 'Processing...',
-                errorNoPrompt: 'Please enter a command.',
-                errorNoOutput: 'Please select at least one output type.',
-                resultsTitle: 'Results',
-                generatedTextTitle: 'Generated Text',
-                generatedSpeechTitle: 'Speech (TTS)',
-                generatedImageTitle: 'Generated Image',
-                statusGeneratingText: 'Generating Text...',
-                statusGeneratingSpeech: 'Generating Speech... Please wait.',
-                statusGeneratingImage: 'Generating Image... Please wait.',
-                statusSpeechPlaceholder: 'Audio not generated yet.',
-                statusImagePlaceholder: 'Image not generated yet.',
-                statusErrorText: 'Error: Failed to generate text. (',
-                statusErrorSpeech: 'Error: Failed to generate speech. (',
-                statusErrorImage: 'Error: Failed to generate image. (',
-                statusErrorGeneral: 'General Error: A problem occurred during the operation. ',
-                statusTextUnavailable: 'Text could not be retrieved.',
-
-                // Yeni Auth Keys
-                loginTitle: 'Login',
-                usernameLabel: 'Username',
-                usernamePlaceholder: 'Enter your username',
-                loginAction: 'Login',
-                loginButtonText: 'Login',
-                logoutButtonText: 'Logout',
-                welcomeMessage: 'Welcome,',
-                statusLoggedOut: 'Not logged in.'
-            },
-            'es': {
-                appTitle: 'Asistente de Creación Múltiple',
-                appSubtitle: 'Seleccione los tipos de salida deseados e ingrese su comando.',
-                settingsTitle: 'Configuración',
-                themeTitle: 'Selección de Tema',
-                themeLight: 'Modo Claro',
-                themeDark: 'Modo Oscuro',
-                languageTitle: 'Selección de Idioma',
-                outputTitle: 'Tipos de Salida (Seleccione Uno o Más):',
-                createText: 'Generar Texto',
-                createSpeech: 'Generar Voz (TTS)',
-                createImage: 'Generar Imagen',
-                promptLabel: 'Ingrese Su Comando:',
-                promptPlaceholder: "Ej.: Escribe una historia corta sobre un 'lindo gato flotando en el espacio'.",
-                generateButton: 'Iniciar Creación',
-                processingText: 'Procesando...',
-                errorNoPrompt: 'Por favor ingrese un comando.',
-                errorNoOutput: 'Por favor seleccione al menos un tipo de salida.',
-                resultsTitle: 'Resultados',
-                generatedTextTitle: 'Texto Generado',
-                generatedSpeechTitle: 'Voz (TTS)',
-                generatedImageTitle: 'Imagen Generada',
-                statusGeneratingText: 'Generando Texto...',
-                statusGeneratingSpeech: 'Generando Voz... Por favor espere.',
-                statusGeneratingImage: 'Generando Imagen... Por favor espere.',
-                statusSpeechPlaceholder: 'Audio aún no generado.',
-                statusImagePlaceholder: 'Imagen aún no generado.',
-                statusErrorText: 'Error: Falló al generar texto. (',
-                statusErrorSpeech: 'Error: Falló al generar voz. (',
-                statusErrorImage: 'Error: Falló al generar imagen. (',
-                statusErrorGeneral: 'Error General: Ocurrió un problema durante la operación. ',
-                statusTextUnavailable: 'No se pudo recuperar el texto.',
-
-                // Yeni Auth Keys
-                loginTitle: 'Iniciar Sesión',
-                usernameLabel: 'Nombre de Usuario',
-                usernamePlaceholder: 'Ingrese su nombre de usuario',
-                loginAction: 'Iniciar Sesión',
-                loginButtonText: 'Iniciar Sesión',
-                logoutButtonText: 'Cerrar Sesión',
-                welcomeMessage: 'Bienvenido,',
-                statusLoggedOut: 'Sesión no iniciada.'
-            },
-            'de': {
-                appTitle: 'Multi-Erstellungs-Assistent',
-                appSubtitle: 'Wählen Sie die gewünschten Ausgabetypen und geben Sie Ihren Befehl ein.',
-                settingsTitle: 'Einstellungen',
-                themeTitle: 'Thema wählen',
-                themeLight: 'Heller Modus',
-                themeDark: 'Dunkler Modus',
-                languageTitle: 'Sprachauswahl',
-                outputTitle: 'Ausgabetypen (Wählen Sie einen oder mehrere):',
-                createText: 'Text generieren',
-                createSpeech: 'Sprache generieren (TTS)',
-                createImage: 'Bild generieren',
-                promptLabel: 'Geben Sie Ihren Befehl ein:',
-                promptPlaceholder: "Bsp.: Schreiben Sie eine Kurzgeschichte über eine 'niedliche Katze, die im Weltraum schwebt'.",
-                generateButton: 'Erstellung starten',
-                processingText: 'Wird verarbeitet...',
-                errorNoPrompt: 'Bitte geben Sie einen Befehl ein.',
-                errorNoOutput: 'Bitte wählen Sie mindestens einen Ausgabetyp.',
-                resultsTitle: 'Ergebnisse',
-                generatedTextTitle: 'Generierter Text',
-                generatedSpeechTitle: 'Sprache (TTS)',
-                generatedImageTitle: 'Generiertes Bild',
-                statusGeneratingText: 'Text wird generiert...',
-                statusGeneratingSpeech: 'Sprache wird generiert... Bitte warten Sie.',
-                statusGeneratingImage: 'Bild wird generiert... Bitte warten Sie.',
-                statusSpeechPlaceholder: 'Audio noch nicht generiert.',
-                statusImagePlaceholder: 'Bild noch nicht generiert.',
-                statusErrorText: 'Fehler: Texterstellung fehlgeschlagen. (',
-                statusErrorSpeech: 'Fehler: Spracherstellung fehlgeschlagen. (',
-                statusErrorImage: 'Fehler: Bilderstellung fehlgeschlagen. (',
-                statusErrorGeneral: 'Allgemeiner Fehler: Während des Vorgangs ist ein Problem aufgetreten. ',
-                statusTextUnavailable: 'Text konnte nicht abgerufen werden.',
-
-                // Yeni Auth Keys
-                loginTitle: 'Anmelden',
-                usernameLabel: 'Benutzername',
-                usernamePlaceholder: 'Geben Sie Ihren Benutzernamen ein',
-                loginAction: 'Anmelden',
-                loginButtonText: 'Anmelden',
-                logoutButtonText: 'Abmelden',
-                welcomeMessage: 'Willkommen,',
-                statusLoggedOut: 'Nicht angemeldet.'
-            },
-            'ru': {
-                appTitle: 'Мастер Множественного Творения',
-                appSubtitle: 'Выберите желаемые типы вывода и введите свою команду.',
-                settingsTitle: 'Настройки',
-                themeTitle: 'Выбор Темы',
-                themeLight: 'Светлый Режим',
-                themeDark: 'Темный Режим',
-                languageTitle: 'Выбор Языка',
-                outputTitle: 'Типы Вывода (Выберите Один или Несколько):',
-                createText: 'Создать Текст',
-                createSpeech: 'Создать Речь (TTS)',
-                createImage: 'Создать Изображение',
-                promptLabel: 'Введите Вашу Команду:',
-                promptPlaceholder: "Пример: Напишите короткий рассказ о 'милом коте, плавающем в космосе'.",
-                generateButton: 'Начать Творение',
-                processingText: 'Обработка...',
-                errorNoPrompt: 'Пожалуйста, введите команду.',
-                errorNoOutput: 'Пожалуйста, выберите хотя бы один тип вывода.',
-                resultsTitle: 'Результаты',
-                generatedTextTitle: 'Сгенерированный Текст',
-                generatedSpeechTitle: 'Речь (TTS)',
-                generatedImageTitle: 'Сгенерированное Изображение',
-                statusGeneratingText: 'Генерация Текста...',
-                statusGeneratingSpeech: 'Генерация Речи... Пожалуйста, подождите.',
-                statusGeneratingImage: 'Генерация Изображения... Пожалуйста, подождите.',
-                statusSpeechPlaceholder: 'Аудио еще не сгенерировано.',
-                statusImagePlaceholder: 'Изображение еще не сгенерировано.',
-                statusErrorText: 'Ошибка: Не удалось сгенерировать текст. (',
-                statusErrorSpeech: 'Ошибка: Не удалось сгенерировать речь. (',
-                statusErrorImage: 'Ошибка: Не удалось сгенерировать изображение. (',
-                statusErrorGeneral: 'Общая Ошибка: Во время операции произошла проблема. ',
-                statusTextUnavailable: 'Текст не может быть получен.',
-
-                // Yeni Auth Keys
-                loginTitle: 'Войти',
-                usernameLabel: 'Имя Пользователя',
-                usernamePlaceholder: 'Введите ваше имя пользователя',
-                loginAction: 'Войти',
-                loginButtonText: 'Войти',
-                logoutButtonText: 'Выйти',
-                welcomeMessage: 'Добро пожаловать,',
-                statusLoggedOut: 'Не авторизован.'
-            }
-        };
-
-        let currentLanguage = localStorage.getItem('appLanguage') || 'tr';
-        let currentTheme = localStorage.getItem('appTheme') || 'light';
-
-        function updateUIForLanguage(lang) {
-            const t = translations[lang];
-
-            // 1. data-i18n-key ile etiketleri güncelle
-            document.querySelectorAll('[data-i18n-key]').forEach(el => {
-                const key = el.getAttribute('data-i18n-key');
-                if (t[key]) {
-                    el.textContent = t[key];
-                }
-            });
-
-            // 2. data-i18n-placeholder ile placeholder'ları güncelle
-            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-                const key = el.getAttribute('data-i18n-placeholder');
-                if (t[key]) {
-                    el.placeholder = t[key];
-                }
-            });
-
-            // 3. Aktif dil butonunu işaretle
-            document.querySelectorAll('.lang-button').forEach(button => {
-                button.classList.remove('active');
-                if (button.getAttribute('data-lang') === lang) {
-                    button.classList.add('active');
-                }
-            });
-            
-            // 4. Başlığı güncelle
-            document.title = t.appTitle;
-
-            currentLanguage = lang;
-            localStorage.setItem('appLanguage', lang);
-            updateAuthUI(); // Dil değiştiğinde auth metinlerini de güncelle
+    // Sidebar'ı açıp kapatır
+    function toggleSidebar() {
+        sidebar.classList.toggle('open');
+        // Sidebar açıldığında menüden silme/yükleme yapabilmek için listeyi yenile
+        if (sidebar.classList.contains('open')) {
+            renderSidebar();
         }
+    }
+    
+    // --- GENEL UI FONKSİYONLARI ---
 
-        function buildLanguageSelector() {
-            const selector = document.getElementById('languageSelector');
-            selector.innerHTML = '';
-            
-            Object.keys(LANGUAGES).forEach(code => {
-                const button = document.createElement('button');
-                button.setAttribute('data-lang', code);
-                button.classList.add('lang-button', 'py-2', 'px-4', 'rounded-lg', 'text-sm', 'font-medium', 'shadow-sm');
-                button.textContent = LANGUAGES[code];
-                button.onclick = () => updateUIForLanguage(code);
-                
-                selector.appendChild(button);
-            });
+    // Mesaj Kutusu Yönetimi
+    function showMessage(text, type = 'info') {
+        let classes = 'text-gray-900 bg-gray-100 border-gray-300';
+        if (type === 'success') {
+            classes = 'text-green-800 bg-green-100 border-green-300';
+        } else if (type === 'error') {
+            classes = 'text-red-800 bg-red-100 border-red-300';
+        } else if (type === 'warning') {
+            classes = 'text-yellow-800 bg-yellow-100 border-yellow-300';
         }
+        
+        messageBox.className = `p-3 mb-4 text-sm rounded-lg shadow-md transition-all duration-300 border ${classes}`;
+        messageBox.innerHTML = text;
+        messageBox.classList.remove('hidden');
 
-        // --- Tema Fonksiyonları ---
-        window.setTheme = function(theme) {
-            const htmlEl = document.documentElement;
-            if (theme === 'dark') {
-                htmlEl.classList.add('dark');
-                document.getElementById('themeDark').classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
-                document.getElementById('themeLight').classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
-            } else {
-                htmlEl.classList.remove('dark');
-                document.getElementById('themeLight').classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
-                document.getElementById('themeDark').classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+        setTimeout(() => {
+            messageBox.classList.add('hidden');
+        }, 5000);
+    }
+
+    // --- GEMINI API FONKSİYONLARI ---
+
+    // Dosyayı Base64 string'e dönüştürür (veri tipi dahil: "data:image/jpeg;base64,...")
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            if (!file) {
+                return reject(new Error("Dosya yok."));
             }
-            currentTheme = theme;
-            localStorage.setItem('appTheme', theme);
-        }
-
-        function initializeTheme() {
-            window.setTheme(currentTheme);
-        }
-
-        // --- Ayarlar Paneli Fonksiyonu ---
-        window.toggleSettings = function() {
-            const panel = document.getElementById('settingsPanel');
-            const overlay = document.getElementById('settingsOverlay');
-            
-            panel.classList.toggle('open');
-            overlay.classList.toggle('open');
-            if (panel.classList.contains('open')) {
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.add('open'), 10); // Overlay geçişini başlat
-            } else {
-                overlay.classList.remove('open');
-                setTimeout(() => overlay.classList.add('hidden'), 300); // Geçişten sonra gizle
-            }
-        }
-
-        // --- UI Elementleri ---
-        const promptInput = document.getElementById('prompt');
-        const checkText = document.getElementById('checkText');
-        const checkSpeech = document.getElementById('checkSpeech');
-        const checkImage = document.getElementById('checkImage');
-        const generateButton = document.getElementById('generateButton');
-        const buttonText = document.getElementById('buttonText');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const errorMessage = document.getElementById('errorMessage');
-
-        const textOutputContainer = document.getElementById('textOutputContainer');
-        const textOutput = document.getElementById('textOutput');
-        const speechOutputContainer = document.getElementById('speechOutputContainer');
-        const audioPlayer = document.getElementById('audioPlayer');
-        const speechPlaceholder = document.getElementById('speechPlaceholder');
-        const imageOutputContainer = document.getElementById('imageOutputContainer');
-        const generatedImage = document.getElementById('generatedImage');
-        const imagePlaceholder = document.getElementById('imagePlaceholder');
-
-        // Sabitler
-        const API_KEY = "AIzaSyC5TjJMwl_kjTF9unQbpik5exA8WDn0_Bk"; // Canvas ortamında otomatik sağlanacaktır.
-
-        // --- TTS Yardımcı Fonksiyonları ---
-
-        function base64ToArrayBuffer(base64) {
-            const binaryString = atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
-
-        function pcmToWav(pcmData, sampleRate) {
-            const buffer = new ArrayBuffer(44 + pcmData.length * 2);
-            const view = new DataView(buffer);
-
-            function writeString(view, offset, string) {
-                for (let i = 0; i < string.length; i++) {
-                    view.setUint8(offset + i, string.charCodeAt(i));
-                }
-            }
-
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + pcmData.length * 2, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true); // PCM format
-            view.setUint16(22, 1, true); // 1 kanal
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true); // Byte rate
-            view.setUint16(32, 2, true); // Blok hizalaması (2 byte, 16 bit stereo yok)
-            view.setUint16(34, 16, true); // Örnek başına bit (16 bit)
-            writeString(view, 36, 'data');
-            view.setUint32(40, pcmData.length * 2, true);
-
-            let offset = 44;
-            for (let i = 0; i < pcmData.length; i++) {
-                view.setInt16(offset, pcmData[i], true); // Signed 16-bit
-                offset += 2;
-            }
-
-            return new Blob([buffer], { type: 'audio/wav' });
-        }
-
-        // --- API Çağrı Fonksiyonları ---
-
-        function setStatus(text, isError = false) {
-            errorMessage.textContent = text;
-            if (isError) {
-                errorMessage.classList.remove('hidden');
-                errorMessage.classList.remove('text-green-600', 'dark:text-green-400');
-                errorMessage.classList.add('text-red-600', 'dark:text-red-400');
-            } else {
-                errorMessage.classList.remove('text-red-600', 'dark:text-red-400');
-                errorMessage.classList.add('text-green-600', 'dark:text-green-400');
-                errorMessage.classList.remove('hidden');
-            }
-        }
-
-        function setLoading(isLoading) {
-            generateButton.disabled = isLoading;
-            const t = translations[currentLanguage];
-            if (isLoading) {
-                buttonText.textContent = t.processingText;
-                loadingIndicator.classList.remove('hidden');
-                errorMessage.classList.add('hidden');
-            } else {
-                buttonText.textContent = t.generateButton;
-                loadingIndicator.classList.add('hidden');
-            }
-        }
-
-        function resetOutput() {
-            textOutputContainer.classList.add('hidden');
-            speechOutputContainer.classList.add('hidden');
-            imageOutputContainer.classList.add('hidden');
-
-            textOutput.textContent = '';
-            
-            audioPlayer.classList.add('hidden');
-            audioPlayer.src = '';
-            speechPlaceholder.classList.remove('hidden');
-
-            generatedImage.classList.add('hidden');
-            generatedImage.src = '';
-            imagePlaceholder.classList.remove('hidden');
-
-            errorMessage.classList.add('hidden');
-        }
-
-        async function fetchWithRetry(url, options, maxRetries = 5) {
-            for (let attempt = 0; attempt < maxRetries; attempt++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response;
-                } catch (error) {
-                    if (attempt === maxRetries - 1) throw error;
-                    // Exponential backoff
-                    const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-        }
-
-        async function generateText(prompt) {
-            const t = translations[currentLanguage];
-            setStatus(t.statusGeneratingText);
-            
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
-            const systemPrompt = `You are a creative assistant. Based on the user's prompt, generate a creative text response. The response language must be ${LANGUAGES[currentLanguage]}.`;
-
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-            };
-
-            const response = await fetchWithRetry(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await response.json();
-            const text = result.candidates?.[0]?.content?.parts?.[0]?.text || t.statusTextUnavailable;
-            textOutput.textContent = text;
-            textOutputContainer.classList.remove('hidden');
-            return text;
-        }
-
-        async function generateSpeech(text) {
-            const t = translations[currentLanguage];
-            setStatus(t.statusGeneratingSpeech);
-
-            const voiceName = currentLanguage === 'tr' ? 'Kore' : 'Zephyr'; // Örnek olarak Kore veya Zephyr
-
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${API_KEY}`;
-            
-            const payload = {
-                contents: [{ parts: [{ text: text }] }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: {
-                        voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } }
-                    }
-                },
-                model: "gemini-2.5-flash-preview-tts"
-            };
-
-            const response = await fetchWithRetry(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await response.json();
-            const part = result?.candidates?.[0]?.content?.parts?.[0];
-            const audioData = part?.inlineData?.data;
-            const mimeType = part?.inlineData?.mimeType;
-
-            if (audioData && mimeType && mimeType.startsWith("audio/")) {
-                const sampleRateMatch = mimeType.match(/rate=(\d+)/);
-                const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 24000;
-                
-                const pcmData = base64ToArrayBuffer(audioData);
-                const pcm16 = new Int16Array(pcmData);
-                const wavBlob = pcmToWav(pcm16, sampleRate);
-                
-                audioPlayer.src = URL.createObjectURL(wavBlob);
-                audioPlayer.classList.remove('hidden');
-                speechPlaceholder.classList.add('hidden');
-                speechOutputContainer.classList.remove('hidden');
-            } else {
-                throw new Error("TTS response missing audio data.");
-            }
-        }
-
-        async function generateImage(prompt) {
-            const t = translations[currentLanguage];
-            setStatus(t.statusGeneratingImage);
-
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
-            const payload = { 
-                instances: [{ prompt: prompt }], 
-                parameters: { "sampleCount": 1 } 
-            };
-
-            const response = await fetchWithRetry(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await response.json();
-            const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
-
-            if (base64Data) {
-                generatedImage.src = `data:image/png;base64,${base64Data}`;
-                generatedImage.classList.remove('hidden');
-                imagePlaceholder.classList.add('hidden');
-                imageOutputContainer.classList.remove('hidden');
-            } else {
-                throw new Error("Image generation failed or returned no data.");
-            }
-        }
-
-        // --- Ana İşlem Akışı ---
-        window.processRequest = async function() {
-            if (!currentUsername) {
-                 showLoginModal();
-                 return;
-            }
-
-            resetOutput();
-            const t = translations[currentLanguage];
-            const prompt = promptInput.value.trim();
-            const shouldGenerateText = checkText.checked;
-            const shouldGenerateSpeech = checkSpeech.checked;
-            const shouldGenerateImage = checkImage.checked;
-
-            if (!prompt) {
-                setStatus(t.errorNoPrompt, true);
-                return;
-            }
-            if (!shouldGenerateText && !shouldGenerateSpeech && !shouldGenerateImage) {
-                setStatus(t.errorNoOutput, true);
-                return;
-            }
-
-            setLoading(true);
-
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+    
+    // API çağrısını üstel geri çekilme ile yapar
+    async function callApiWithBackoff(url, payload, maxRetries = 5) {
+        for (let i = 0; i < maxRetries; i++) {
             try {
-                let generatedTextContent = null;
-                let textError = null;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-                // 1. Metin Oluşturma (Gerekliyse)
-                if (shouldGenerateText || shouldGenerateSpeech) {
-                    try {
-                        generatedTextContent = await generateText(prompt);
-                    } catch (e) {
-                        textError = e;
-                        console.error('Metin Oluşturma Hatası:', e);
-                        setStatus(t.statusErrorText + 'Metin Hatası)', true);
+                if (response.status === 429 || response.status >= 500) {
+                    // 429 Too Many Requests veya 5xx sunucu hataları için tekrar dene
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    if (i < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue; // Tekrar dene
                     }
                 }
                 
-                // 2. Seslendirme (Metin başarıyla oluşturulduysa veya kullanıcı sadece Ses istedi ve metin alamadıysa)
-                if (shouldGenerateSpeech) {
-                    if (generatedTextContent) {
-                        try {
-                            await generateSpeech(generatedTextContent);
-                        } catch (e) {
-                            console.error('Seslendirme Hatası:', e);
-                            setStatus(t.statusErrorSpeech + 'TTS Hatası)', true);
-                        }
-                    } else if (!shouldGenerateText && !textError) {
-                        // Kullanıcı sadece TTS istedi ama metin oluşturma kapalıydı. TTS için yeni bir metin oluşturulmasını talep edebiliriz.
-                        // Ancak, mevcut yapı TTS'in Text'e bağlı olmasını bekler. Metin yoksa atla.
-                        console.warn("TTS istendi ancak metin içeriği mevcut değil veya oluşturulamadı. TTS atlanıyor.");
-                    }
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API hatası: ${response.status} ${response.statusText} - ${errorText}`);
                 }
-
-                // 3. Görsel Oluşturma
-                if (shouldGenerateImage) {
-                    try {
-                        // Görsel oluşturma için orijinal prompt kullanılır
-                        await generateImage(prompt);
-                    } catch (e) {
-                        console.error('Görsel Oluşturma Hatası:', e);
-                        setStatus(t.statusErrorImage + 'Görsel Hatası)', true);
-                    }
-                }
-
-                // Tüm işlemler tamamlandıktan sonra başarılı durumu sıfırla
-                setLoading(false);
-                errorMessage.classList.add('hidden');
+                
+                return await response.json();
 
             } catch (error) {
-                console.error("İşlem sırasında genel hata:", error);
-                setStatus(t.statusErrorGeneral + error.message, true);
-                setLoading(false);
+                if (i === maxRetries - 1) {
+                    throw error; // Maksimum denemeden sonra hatayı fırlat
+                }
             }
         }
+    }
+    
+    // Görselden metni çıkarır ve editöre ekler
+    async function processImage(file) {
+        if (!file) return;
 
-        // --- Başlatma ---
-        function initApp() {
-            buildLanguageSelector();
-            initializeTheme();
-            updateUIForLanguage(currentLanguage); // UI'ı başlat
-            checkAuthStatus(); // Giriş durumunu kontrol et
-            lucide.createIcons(); // Lucide ikonlarını başlat
+        extractionLoadingIndicator.classList.remove('hidden');
+        extractTextButton.disabled = true;
+
+        try {
+            // 1. Base64'e dönüştür
+            const base64DataUrl = await fileToBase64(file);
+            const [mimeType, base64Data] = base64DataUrl.split(',');
+
+            if (!base64Data) {
+                 throw new Error("Base64 veri ayrıştırılamadı.");
+            }
+            
+            // 2. API Payload oluştur
+            const userPrompt = "Bu görseldeki tüm metni çıkar ve biçimlendirilmiş metin (örneğin paragraflar, liste maddeleri) olarak geri döndür. Türkçe karakterlere ve noktalama işaretlerine dikkat et. Herhangi bir açıklayıcı cümle, başlık veya YZ mesajı ekleme. Sadece çıkarılan metni döndür.";
+            
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: userPrompt },
+                        {
+                            inlineData: {
+                                mimeType: mimeType.split(':')[1].split(';')[0], // 'image/png'
+                                data: base64Data 
+                            }
+                        }
+                    ]
+                }],
+            };
+
+            // 3. API'yi çağır (Üstel geri çekilme ile)
+            const result = await callApiWithBackoff(apiUrl, payload);
+            
+            const extractedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (extractedText) {
+                // 4. Metni editöre ekle
+                // Metni bir <p> etiketi içine sararak veya olduğu gibi ekleyerek editöre ekleyebiliriz.
+                // Markdown/Text döndürdüğü için yeni bir div oluşturup innerHTML olarak eklemek,
+                // biçimlendirmeyi (paragraf, liste) korumada yardımcı olabilir.
+                
+                // Metni eklemeden önce, satır sonlarını <br> veya yeni paragraflara dönüştürerek
+                // düzenlenebilir div'e uygun hale getirelim.
+                const formattedText = extractedText
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .join('<br>'); // Basitçe satır sonlarını koru
+                
+                editor.innerHTML += `<hr style="margin-top: 15px; margin-bottom: 15px;"><h4>Görselden Çıkarılan Metin:</h4>` + formattedText;
+                
+                showMessage(`Görseldeki metin (${file.name}) başarıyla çıkarıldı ve editöre eklendi.`, 'success');
+                editor.focus();
+            } else {
+                showMessage("YZ görselden metin çıkaramadı. Lütfen daha net bir görsel deneyin.", 'warning');
+            }
+
+        } catch (error) {
+            console.error("Metin Çıkarma Hatası:", error);
+            showMessage("Metin çıkarma işleminde kritik bir hata oluştu: " + error.message, 'error');
+        } finally {
+            extractionLoadingIndicator.classList.add('hidden');
+            extractTextButton.disabled = false;
+            // Dosya seçim alanını temizle
+            imageUploadInput.value = '';
+        }
+    }
+    
+    // --- PDF FONKSİYONU ---
+
+    // Metni PDF'e dönüştürme (html2canvas ile)
+    function generatePDF() {
+        const contentHtml = editor.innerHTML.trim();
+        if (!contentHtml) {
+            showMessage("Lütfen PDF oluşturmak için içerik girin.", 'warning');
+            return;
         }
 
-        window.onload = initApp;
+        document.getElementById('download-text').classList.add('hidden');
+        document.getElementById('download-loading').classList.remove('hidden');
+        downloadPdfButton.disabled = true;
 
-    </script>
-</body>
-</html>
+        try {
+            // Biçimlendirilmiş HTML içeriğini gizli yakalama alanına yerleştir
+            pdfCaptureArea.innerHTML = contentHtml;
+
+            // PDF ayarları
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4'); 
+            const source = pdfCaptureArea;
+            
+            // html2canvas ile DOM elementini tuvale (canvas) dönüştür
+            window.html2canvas(source, {
+                scale: 2, // Yüksek çözünürlük için
+                useCORS: true,
+                logging: false,
+                // letterRendering: true kaldırıldı
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                
+                const pdfWidthMM = 170; // PDF içeriği genişliği (A4 - 2 * 20mm margin)
+                const margin = 20; // 20mm kenar boşluğu
+                
+                const imgWidth = pdfWidthMM;
+                const pageHeight = doc.internal.pageSize.getHeight(); // A4 yüksekliği (297mm)
+                const imgHeight = canvas.height * imgWidth / canvas.width; // Toplam resim yüksekliği (mm)
+                const contentHeight = pageHeight - (2 * margin); // Bir sayfadaki kullanılabilir içerik yüksekliği (257mm)
+                
+                let heightLeft = imgHeight;
+                let positionY = 0; // PDF sayfası üzerinde görüntünün başlayacağı Y pozisyonu (kaydırmayı simüle etmek için negatif olacak)
+
+                // İlk sayfayı ekle
+                // Görüntünün tamamını ekle, ancak sadece sayfa boyutunda görünen kısmını PDF'e sığdır.
+                doc.addImage(imgData, 'PNG', margin, margin + positionY, imgWidth, imgHeight);
+                
+                // Kalan yükseklikten ilk sayfanın içerik alanını düş
+                heightLeft -= contentHeight; 
+
+                // Çok sayfalı döngü
+                while (heightLeft > 0) {
+                    // Pozisyonu bir sayfa içeriği yüksekliği kadar yukarı kaydır
+                    positionY -= contentHeight; 
+                    doc.addPage();
+                    
+                    // Görüntünün tamamını, yeni kaydırılmış pozisyonda ekle
+                    // (margin + positionY) kısmı, görüntünün üst kenarını yukarı taşıyarak
+                    // bir sonraki sayfa bölümünün görünmesini sağlar.
+                    doc.addImage(imgData, 'PNG', margin, margin + positionY, imgWidth, imgHeight);
+                    
+                    heightLeft -= contentHeight;
+                }
+                
+                // Önizleme ve İndirme
+                doc.save("Belgem_Bicimli_Onizle.pdf");
+                showMessage("PDF başarıyla oluşturuldu. Tarayıcınız önizleme penceresini açacaktır.", 'success');
+
+                // Temizleme
+                pdfCaptureArea.innerHTML = '';
+            }).catch(e => {
+                console.error("PDF oluşturma/html2canvas hatası:", e);
+                showMessage("PDF oluşturulurken bir hata oluştu. Biçimlendirmeyi sadeleştirmeyi deneyin (hata: Incomplete or corrupt PNG file).", 'error');
+            }).finally(() => {
+                // UI durumu geri yükle
+                document.getElementById('download-text').classList.remove('hidden');
+                document.getElementById('download-loading').classList.add('hidden');
+                downloadPdfButton.disabled = false;
+            });
+
+        } catch (e) {
+            console.error("PDF oluşturma hatası:", e);
+            showMessage("PDF oluşturulurken beklenmedik bir hata oluştu.", 'error');
+            document.getElementById('download-text').classList.remove('hidden');
+            document.getElementById('download-loading').classList.add('hidden');
+            downloadPdfButton.disabled = false;
+        }
+    }
+
+
+    // --- EVENT LISTENERS ---
+    
+    // Yükleme sırasında varsayılan içeriği editöre yükle
+    window.onload = function() {
+        renderSidebar(); // Başlangıçta sidebar'ı doldur
+        editor.innerHTML = DEFAULT_CONTENT; // Uygulama ilk açıldığında varsayılan içeriği yükle
+    };
+
+    // Görsel Yükleme Butonu Tıklaması
+    extractTextButton.addEventListener('click', () => {
+        imageUploadInput.click();
+    });
+
+    // Görsel Seçildikten Sonra
+    imageUploadInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            processImage(file);
+        }
+    });
+
+    menuButton.addEventListener('click', toggleSidebar);
+    closeSidebarButton.addEventListener('click', toggleSidebar);
+    downloadPdfButton.addEventListener('click', generatePDF);
+    saveDocumentButton.addEventListener('click', saveDocument);
+    newDocumentButton.addEventListener('click', createNewDocument);
+</script
