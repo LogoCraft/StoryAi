@@ -3,682 +3,599 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gelişmiş PDF Belge Oluşturucu ve Biçimlendirici</title>
-    <!-- Tailwind CSS -->
+    <title>MuDoc - Güvenli Depolama Alanınız</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
+        /* CSS for the glow/illumination effect */
+        .neon-glow {
+            text-shadow: 0 0 5px #f97316, 0 0 10px #f97316, 0 0 20px #ea580c;
+        }
+        .card-glow {
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.4), 0 0 20px rgba(249, 115, 22, 0.2);
+        }
+        .btn-glow {
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
+        }
+        .btn-glow:hover {
+            box-shadow: 0 0 15px rgba(249, 115, 22, 0.9), 0 0 30px rgba(249, 115, 22, 0.5);
+            transform: translateY(-1px);
+        }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f7f7f7;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            overflow-x: hidden; /* Sidebar geçişi sırasında yatay kaydırmayı engelle */
+            background-color: #0d0d0d; /* Slightly darker black background */
         }
-        /* Biçimlendirilebilir Alan Stili */
-        #editor[contenteditable="true"] {
-            min-height: 300px;
-            /* Yazıların biçimlendirmesini göstermek için */
-            line-height: 1.6;
-            font-size: 11pt;
-            cursor: text;
+        /* Scrollbar styling for a dark theme */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
-        /* Sidebar Stili */
-        #sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 300px;
-            max-width: 80vw; /* Mobil uyumluluk */
-            background-color: #1f2937; /* Koyu Gri */
-            color: white;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            z-index: 50;
-            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
-            overflow-y: auto;
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* Dark gray for track */
         }
-        #sidebar.open {
-            transform: translateX(0);
+        ::-webkit-scrollbar-thumb {
+            background: #f97316; /* Orange for thumb */
+            border-radius: 4px;
         }
-        /* PDF içeriğini yakalamak için gizli div stili (GİZLİ!) */
-        #pdf-capture-area {
-            position: absolute;
-            left: -9999px;
-            top: -9999px;
-            z-index: -10;
-            width: 210mm; /* A4 Genişliği */
-            min-height: 297mm; /* A4 Yüksekliği */
-            box-sizing: border-box;
-            background-color: white;
-            padding: 20mm; /* A4 Kenar Boşluğu */
-            font-family: 'Inter', sans-serif;
-            line-height: 1.6;
+        .container-item.active {
+            background-color: #f97316; /* Orange-600 */
+            color: #1f2937; /* Dark text */
+            font-weight: 600;
         }
-        /* Hamburger butonu konumu */
-        #menu-button {
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            z-index: 60;
+        .container-item.active .text-gray-400 {
+            color: #1f2937 !important;
         }
     </style>
-    <!-- JS PDF Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- HTML2Canvas (PDF'e Biçimlendirilmiş HTML'i aktarmak için) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- Crypto JS (Gerekmese de önceki koddan taşındı) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
-<body>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-8">
 
-<!-- Sol Yukarıdaki Menü Butonu -->
-<button id="menu-button" class="p-3 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-</button>
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V2</h1>
+            <p class="mt-2 text-xl text-gray-400">Özel Konumlarınız, Şifre Korumalı Dosya ve Notlarınız.</p>
+        </header>
 
-<!-- Yan Gezinme Çubuğu (Sidebar) -->
-<div id="sidebar" class="p-4">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-bold text-indigo-400">Kaydedilen Belgeler</h2>
-        <button id="close-sidebar" class="p-2 text-white hover:text-indigo-400 transition duration-150">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </button>
-    </div>
-    
-    <!-- YENİ: Boş Belge Oluştur Butonu -->
-    <button id="new-document-button" class="w-full mb-4 py-2 px-4 bg-indigo-500 text-white font-semibold rounded-lg shadow hover:bg-indigo-600 transition duration-200">
-        Yeni Boş Belge Oluştur
-    </button>
+        <!-- Main Content Grid: Containers List (Left) and Content Area (Right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
 
-    <ul id="document-list" class="space-y-2">
-        <!-- Belgeler buraya dinamik olarak yüklenecek -->
-    </ul>
-    <p id="no-documents-message" class="text-sm text-gray-400 mt-4">Henüz kaydedilmiş belge yok.</p>
-</div>
+            <!-- 1. Konumlar Listesi (Containers) -->
+            <div class="lg:col-span-1 p-6 bg-gray-800 rounded-xl card-glow h-fit">
+                <h2 class="text-3xl font-bold mb-4 text-orange-400">Konumlar</h2>
 
-<div id="app" class="w-full max-w-4xl p-4 md:p-8">
-    <header class="text-center mb-6">
-        <h1 class="text-3xl font-extrabold text-indigo-700">Biçimlendirilebilir PDF Belge Oluşturucu</h1>
-        <p class="text-gray-500 mt-1">Metninizi biçimlendirin, önizleyin ve cihazınıza kaydedin (Sınırsız Metin Alanı).</p>
-    </header>
+                <!-- Add New Container Form -->
+                <div class="space-y-3 mb-6 p-3 bg-gray-900 rounded-lg border border-orange-500/30">
+                    <input type="text" id="new-container-name" placeholder="Yeni Konum Adı (örn: Ofis)"
+                           class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 text-sm">
+                    <input type="password" id="new-container-password" placeholder="Şifre (Zorunlu Değil)"
+                           class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 text-sm">
+                    <button onclick="createContainer()"
+                            class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow text-sm">
+                        Konum Oluştur
+                    </button>
+                </div>
 
-    <!-- Mesaj Kutusu -->
-    <div id="message-box" class="hidden p-3 mb-4 text-sm rounded-lg shadow-md transition-all duration-300" role="alert"></div>
-
-    <div class="bg-white p-6 rounded-xl shadow-2xl border border-gray-100">
-        
-        <!-- Biçimlendirme Araç Çubuğu -->
-        <div id="toolbar" class="flex flex-wrap gap-2 p-3 bg-gray-100 rounded-t-xl border-b border-gray-200">
-            <!-- Kalın (Bold) -->
-            <button onclick="formatText('bold')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 font-extrabold text-lg transition duration-150" title="Kalın (Bold)">
-                B
-            </button>
-            <!-- İtalik (Italic) -->
-            <button onclick="formatText('italic')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 italic font-medium text-lg transition duration-150" title="İtalik (Italic)">
-                I
-            </button>
-            <!-- Büyük Başlık (H2) -->
-            <button onclick="formatBlock('h2')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 font-bold text-base transition duration-150" title="Büyük Başlık (H2)">
-                Başlık 1
-            </button>
-             <!-- Küçük Başlık (H3) -->
-            <button onclick="formatBlock('h3')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 font-semibold text-sm transition duration-150" title="Küçük Başlık (H3)">
-                Başlık 2
-            </button>
-            <!-- Paragraf (Normal Metin) -->
-            <button onclick="formatBlock('p')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 text-sm transition duration-150" title="Normal Paragraf Metni">
-                Normal
-            </button>
-            <!-- Numaralı Liste -->
-            <button onclick="formatText('insertOrderedList')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 text-sm transition duration-150" title="Numaralı Liste">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm3 8a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-6 0a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm9 3a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-6 0a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-6 0a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm9-3a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1z" clip-rule="evenodd"/></svg>
-            </button>
-            <!-- Madde İşaretli Liste -->
-            <button onclick="formatText('insertUnorderedList')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 text-sm transition duration-150" title="Madde İşaretli Liste">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1zm-3-4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm6 0a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-3-4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-3-4a1 1 0 011 1v1a1 1 0 11-2 0V7a1 1 0 011-1z" clip-rule="evenodd"/></svg>
-            </button>
-            <!-- Yatay Çizgi -->
-            <button onclick="formatText('insertHorizontalRule')" class="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-200 text-sm transition duration-150" title="Yatay Çizgi">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
-            </button>
-            
-            <!-- YENİ: Görselden Metin Çıkarma Butonu -->
-            <input type="file" id="image-upload" accept="image/*" class="hidden">
-            <button id="extract-text-button" class="p-2 bg-indigo-200 text-indigo-800 rounded-lg shadow-sm hover:bg-indigo-300 font-medium text-sm transition duration-150" title="Görselden Metin Çıkar (YZ)">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-            </button>
-
-            <!-- YENİ: Metin Çıkarma Yükleme İndikatörü -->
-            <div id="extraction-loading-indicator" class="hidden flex items-center p-2 text-indigo-700">
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Metin Çıkarılıyor...
+                <!-- Containers List -->
+                <div id="containers-list" class="space-y-2 max-h-96 overflow-y-auto">
+                    <!-- Container items will be injected here -->
+                    <p class="text-center py-4 text-gray-500 text-sm" id="no-containers-message">
+                        Henüz hiç konum oluşturulmadı.
+                    </p>
+                </div>
             </div>
-        </div>
 
-        <!-- Metin Düzenleyici Alanı (ContentEditable) -->
-        <div id="editor" contenteditable="true" class="w-full p-4 border border-gray-300 rounded-b-xl focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out overflow-y-auto">
-            <h2 style="font-size: 1.5em; font-weight: bold;">PDF Belge Başlığı</h2>
-            <p>Bu alanda tüm özel karakterler (`i, ğ, ş, ə`) dahil olmak üzere, <b style="font-weight: bold;">sınırsız</b> metin yazabilirsiniz.</p>
-            <p>Yazdığınız tüm biçimlendirmeler (Başlıklar, kalın yazılar, listeler, boşluklar) PDF'e birebir yansıtılacaktır.</p>
-            <h3 style="font-size: 1.17em; font-weight: bold;">Örnek Liste:</h3>
-            <ul>
-                <li>iğde</li>
-                <li>şeftali</li>
-                <li>Əlifba</li>
-            </ul>
-        </div>
-        
-        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6">
-            <!-- PDF Oluştur, Önizle ve İndir Butonu -->
-            <button id="download-pdf" class="flex-1 bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:bg-indigo-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-400">
-                <span id="download-text">PDF Oluştur, Önizle ve İndir</span>
-                <span id="download-loading" class="hidden">PDF Hazırlanıyor... (Önizleme için Bekleyin)</span>
-            </button>
+            <!-- 2. Konum İçeriği (Container Content) -->
+            <div class="lg:col-span-3 p-6 bg-gray-800 rounded-xl card-glow min-h-[600px]">
+                <div id="content-area">
+                    <h2 class="text-3xl font-bold mb-4 text-orange-400">İçerik Görüntüleyici</h2>
+                    <div id="welcome-message" class="text-center py-20 text-gray-500 text-lg">
+                        Lütfen soldan bir konum seçin veya yeni bir konum oluşturun.
+                    </div>
+                    <!-- Dynamic content will be loaded here -->
+                </div>
+            </div>
 
-            <!-- Yerel Kaydetme Butonu -->
-            <button id="save-document" class="flex-1 bg-green-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:bg-green-600 transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:bg-green-300">
-                <span id="save-text">Belgeyi Yerel Olarak Kaydet</span>
-                <span id="save-loading" class="hidden">Kaydediliyor...</span>
-            </button>
         </div>
-
-        <!-- Yükleme alanı artık sidebar'da listeleniyor, bu alan sadeleştirildi -->
-        <p class="text-sm text-gray-500 mt-4 text-center">Kaydettiğiniz belgelere sol yukarıdaki menüden (☰) ulaşabilirsiniz.</p>
-        
     </div>
-</div>
 
-<!-- GİZLİ PDF İÇERİK YAKALAMA ALANI: Biçimlendirilmiş içeriği A4 boyutunda yakalamak için -->
-<div id="pdf-capture-area"></div>
+    <!-- Message Box/Modal -->
+    <div id="message-box" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
+            <h3 class="text-xl font-bold text-orange-400 mb-4" id="message-title">Bilgi</h3>
+            <p class="text-gray-300 mb-6" id="message-content">Mesaj içeriği.</p>
+            <button onclick="closeMessageBox()"
+                    class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow">
+                Kapat
+            </button>
+        </div>
+    </div>
 
+    <!-- Modals for Password and Rename -->
+    <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
+            <h3 class="text-xl font-bold text-orange-400 mb-4">Konum Kilitli</h3>
+            <p class="text-gray-300 mb-4" id="password-modal-name"></p>
+            <input type="password" id="password-modal-input" placeholder="Şifreyi Girin"
+                   class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 mb-4">
+            <button onclick="unlockContainerAttempt()"
+                    class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow">
+                Kilidi Aç
+            </button>
+            <button onclick="closePasswordModal()"
+                    class="w-full mt-2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-lg">
+                İptal
+            </button>
+        </div>
+    </div>
 
-<script>
-    // DEPOLAMA ANAHTARI (localStorage)
-    const DOCUMENTS_KEY = 'pdf_documents_list';
-    
-    // Gemini API yapılandırması
-    const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
-    const apiKey = "AIzaSyC5TjJMwl_kjTF9unQbpik5exA8WDn0_Bk";
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+    <div id="rename-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
+            <h3 class="text-xl font-bold text-orange-400 mb-4">Konumu Yeniden Adlandır</h3>
+            <input type="text" id="rename-modal-input" placeholder="Yeni Ad"
+                   class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 mb-4">
+            <button onclick="commitRename()"
+                    class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow">
+                Kaydet
+            </button>
+            <button onclick="closeRenameModal()"
+                    class="w-full mt-2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-lg">
+                İptal
+            </button>
+        </div>
+    </div>
 
-    // UI Elementleri
-    const editor = document.getElementById('editor');
-    const downloadPdfButton = document.getElementById('download-pdf');
-    const saveDocumentButton = document.getElementById('save-document');
-    const messageBox = document.getElementById('message-box');
-    const pdfCaptureArea = document.getElementById('pdf-capture-area');
-    const sidebar = document.getElementById('sidebar');
-    const menuButton = document.getElementById('menu-button');
-    const closeSidebarButton = document.getElementById('close-sidebar');
-    const documentList = document.getElementById('document-list');
-    const noDocumentsMessage = document.getElementById('no-documents-message');
-    const newDocumentButton = document.getElementById('new-document-button'); 
-    const imageUploadInput = document.getElementById('image-upload'); // Yeni input
-    const extractTextButton = document.getElementById('extract-text-button'); // Yeni buton
-    const extractionLoadingIndicator = document.getElementById('extraction-loading-indicator');
+    <script>
+        // Global storage key
+        const CONTAINERS_KEY = 'muDocContainers';
+        let containers = [];
+        let activeContainerId = null;
+        let containerToRenameId = null; // Used by the rename modal
 
-    // Varsayılan boş belge içeriği (Yeni belge oluşturulurken kullanılır)
-    const DEFAULT_CONTENT = `
-        <h2 style="font-size: 1.5em; font-weight: bold;">Yeni Boş Belge</h2>
-        <p>Çalışmaya başlamak için buraya metin yazın.</p>
-    `;
-    
-    // --- EDİTÖR FONKSİYONLARI ---
+        // --- Utility Functions ---
 
-    // Kalın, italik, liste vb. temel komutları uygular
-    window.formatText = function(command) {
-        document.execCommand(command, false, null);
-        editor.focus();
-    }
+        /** Shows the custom message box */
+        function showMessageBox(title, content) {
+            document.getElementById('message-title').textContent = title;
+            document.getElementById('message-content').textContent = content;
+            document.getElementById('message-box').classList.remove('hidden');
+            document.getElementById('message-box').classList.add('flex');
+        }
 
-    // Başlık (H2, H3, P) gibi blok formatlarını uygular
-    window.formatBlock = function(tag) {
-        document.execCommand('formatBlock', false, tag);
-        editor.focus();
-    }
+        /** Hides the custom message box */
+        function closeMessageBox() {
+            document.getElementById('message-box').classList.add('hidden');
+            document.getElementById('message-box').classList.remove('flex');
+        }
 
-    // Editörü temizler ve varsayılan boş içeriği yükler
-    window.createNewDocument = function() {
-        if (editor.innerHTML.trim() !== DEFAULT_CONTENT.trim() && editor.innerHTML.trim() !== '') {
-            // confirm() yerine custom modal kullanılması gerektiği için, basit bir onay mesajı veriyoruz.
-            if (!confirm('Kaydedilmemiş değişiklikleriniz kaybolacak. Yeni bir boş belge açmak istediğinizden emin misiniz?')) {
+        /** Generates a unique ID */
+        function generateId() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return Date.now().toString(36) + Math.random().toString(36).substring(2);
+        }
+
+        // --- Container Data Handling ---
+
+        function loadContainers() {
+            try {
+                const savedContainers = localStorage.getItem(CONTAINERS_KEY);
+                containers = savedContainers ? JSON.parse(savedContainers) : [];
+                renderContainersList();
+
+                // If a container was active, try to re-select it (it will be locked/unlocked as necessary)
+                if (activeContainerId) {
+                    selectContainer(activeContainerId);
+                }
+            } catch (e) {
+                console.error("Konumlar yüklenirken hata oluştu:", e);
+            }
+        }
+
+        function saveContainers() {
+            try {
+                localStorage.setItem(CONTAINERS_KEY, JSON.stringify(containers));
+            } catch (e) {
+                console.error("Konumlar kaydedilirken hata oluştu:", e);
+                showMessageBox("Hata", "Konum verileriniz kaydedilemedi.");
+            }
+        }
+
+        function getContainerById(id) {
+            return containers.find(c => c.id === id);
+        }
+
+        // --- Container UI and Actions ---
+
+        function renderContainersList() {
+            const listContainer = document.getElementById('containers-list');
+            listContainer.innerHTML = ''; // Önce tüm içeriği temizle
+
+            if (containers.length === 0) {
+                // Konteyner yoksa, "boş mesajı" HTML olarak yeniden ekle
+                listContainer.innerHTML = `
+                    <p class="text-center py-4 text-gray-500 text-sm" id="no-containers-message">
+                        Henüz hiç konum oluşturulmadı.
+                    </p>
+                `;
                 return;
             }
-        }
-        editor.innerHTML = DEFAULT_CONTENT;
-        showMessage('Yeni boş belge oluşturuldu.', 'info');
-        sidebar.classList.remove('open');
-        editor.focus();
-    }
 
-    // --- YEREL DEPOLAMA (localStorage) FONKSİYONLARI ---
+            containers.forEach(container => {
+                const isActive = container.id === activeContainerId;
+                const isLocked = container.password && !container.unlocked;
 
-    // Yerel depolamadan tüm belgeleri yükler
-    function loadLocalDocuments() {
-        try {
-            const data = localStorage.getItem(DOCUMENTS_KEY);
-            return data ? JSON.parse(data) : [];
-        } catch (e) {
-            console.error("Yerel belgeler yüklenemedi:", e);
-            return [];
-        }
-    }
+                const itemDiv = document.createElement('div');
+                itemDiv.id = `container-${container.id}`;
+                itemDiv.className = `container-item p-3 rounded-lg cursor-pointer flex justify-between items-center ${isActive ? 'active' : 'bg-gray-900 hover:bg-gray-700/50'}`;
+                itemDiv.onclick = () => selectContainer(container.id);
+                itemDiv.innerHTML = `
+                    <span class="flex items-center truncate">
+                        ${isLocked ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-orange-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>'}
+                        <span class="truncate">${container.name}</span>
+                    </span>
+                    <span class="text-xs text-gray-400 ml-2">${container.content.length} öğe</span>
+                `;
 
-    // Belgeleri yerel depolamaya kaydeder
-    function saveLocalDocuments(documents) {
-        try {
-            localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(documents));
-        } catch (e) {
-            console.error("Yerel belgeler kaydedilemedi:", e);
-            showMessage("Kaydetme işlemi başarısız oldu. Tarayıcınızın depolama alanı dolmuş olabilir.", 'error');
-        }
-    }
-    
-    // Metni Yerel Olarak Kaydet
-    function saveDocument() {
-        const contentHtml = editor.innerHTML.trim();
-        if (!contentHtml || contentHtml === DEFAULT_CONTENT.trim()) {
-            showMessage("Lütfen kaydetmek için içerik girin veya mevcut içeriği değiştirin.", 'warning');
-            return;
-        }
-
-        document.getElementById('save-text').classList.add('hidden');
-        document.getElementById('save-loading').classList.remove('hidden');
-        saveDocumentButton.disabled = true;
-
-        try {
-            const documents = loadLocalDocuments();
-            // Basit bir başlık oluştur
-            const titleMatch = contentHtml.match(/<h[1-6].*?>(.*?)<\/h[1-6]>|<p>(.{1,30})<\/p>/i);
-            const defaultTitle = new Date().toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });
-            let title = defaultTitle;
-
-            if (titleMatch) {
-                // HTML etiketlerini temizle
-                title = titleMatch[1] || titleMatch[2];
-                title = title.replace(/<[^>]*>?/gm, '').trim() || defaultTitle;
-                // Başlık 50 karakterden uzunsa kısalt
-                if (title.length > 50) {
-                    title = title.substring(0, 50) + '...';
-                }
-            }
-
-            const docId = 'DOC-' + Date.now(); 
-
-            const newDocument = {
-                id: docId,
-                title: title,
-                content: contentHtml, 
-                createdAt: new Date().toISOString()
-            };
-
-            documents.unshift(newDocument); // Yeni belgeyi listenin başına ekle
-            saveLocalDocuments(documents);
-            renderSidebar(); // Sidebar'ı güncelle
-            
-            showMessage(`Belge ("${title}") yerel olarak kaydedildi!`, 'success');
-        } catch (error) {
-            console.error("Yerel kaydetme hatası:", error);
-            showMessage("Belge kaydedilirken bir hata oluştu: " + error.message, 'error');
-        } finally {
-            document.getElementById('save-text').classList.remove('hidden');
-            document.getElementById('save-loading').classList.add('hidden');
-            saveDocumentButton.disabled = false;
-        }
-    }
-    
-    // Sidebar'daki bir belgeyi editöre yükler
-    function loadDocumentById(docId) {
-        const documents = loadLocalDocuments();
-        const document = documents.find(doc => doc.id === docId);
-
-        if (document) {
-            editor.innerHTML = document.content;
-            showMessage(`Belge ("${document.title}") yüklendi.`, 'success');
-            sidebar.classList.remove('open'); // Yüklendikten sonra sidebar'ı kapat
-        } else {
-            showMessage("Bu kimliğe ait bir belge bulunamadı.", 'error');
-        }
-    }
-    
-    // Sidebar'daki bir belgeyi siler
-    function deleteDocument(docId) {
-        let documents = loadLocalDocuments();
-        const initialLength = documents.length;
-        
-        // Silme işlemi
-        documents = documents.filter(doc => doc.id !== docId);
-        
-        if (documents.length < initialLength) {
-            saveLocalDocuments(documents);
-            renderSidebar();
-            showMessage("Belge başarıyla silindi.", 'success');
-        } else {
-             showMessage("Belge bulunamadı veya silinemedi.", 'error');
-        }
-    }
-
-    // --- SİDEBAR FONKSİYONLARI ---
-
-    // Sidebar'ı dinamik olarak oluşturur
-    function renderSidebar() {
-        const documents = loadLocalDocuments();
-        documentList.innerHTML = ''; 
-
-        if (documents.length === 0) {
-            noDocumentsMessage.classList.remove('hidden');
-            return;
-        }
-
-        noDocumentsMessage.classList.add('hidden');
-
-        documents.forEach(doc => {
-            const li = document.createElement('li');
-            li.className = "flex justify-between items-center bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition cursor-pointer";
-            
-            const titleSpan = document.createElement('span');
-            titleSpan.className = "text-sm text-white truncate flex-1 pr-2";
-            titleSpan.textContent = doc.title;
-            titleSpan.onclick = () => loadDocumentById(doc.id);
-
-            // Silme butonu
-            const deleteButton = document.createElement('button');
-            // confirm() yerine custom modal kullanılması gerektiği için, burada da basit bir onay mesajı veriyoruz.
-            deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-400 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3" /></svg>';
-            deleteButton.className = "ml-2 p-1 rounded hover:bg-gray-500";
-            deleteButton.title = "Sil";
-            deleteButton.onclick = (e) => {
-                e.stopPropagation(); // li tıklamasını engelle
-                if (confirm('Bu belgeyi yerel depolamadan kalıcı olarak silmek istediğinizden emin misiniz?')) {
-                    deleteDocument(doc.id);
-                }
-            };
-
-            li.appendChild(titleSpan);
-            li.appendChild(deleteButton);
-            documentList.appendChild(li);
-        });
-    }
-
-    // Sidebar'ı açıp kapatır
-    function toggleSidebar() {
-        sidebar.classList.toggle('open');
-        // Sidebar açıldığında menüden silme/yükleme yapabilmek için listeyi yenile
-        if (sidebar.classList.contains('open')) {
-            renderSidebar();
-        }
-    }
-    
-    // --- GENEL UI FONKSİYONLARI ---
-
-    // Mesaj Kutusu Yönetimi
-    function showMessage(text, type = 'info') {
-        let classes = 'text-gray-900 bg-gray-100 border-gray-300';
-        if (type === 'success') {
-            classes = 'text-green-800 bg-green-100 border-green-300';
-        } else if (type === 'error') {
-            classes = 'text-red-800 bg-red-100 border-red-300';
-        } else if (type === 'warning') {
-            classes = 'text-yellow-800 bg-yellow-100 border-yellow-300';
-        }
-        
-        messageBox.className = `p-3 mb-4 text-sm rounded-lg shadow-md transition-all duration-300 border ${classes}`;
-        messageBox.innerHTML = text;
-        messageBox.classList.remove('hidden');
-
-        setTimeout(() => {
-            messageBox.classList.add('hidden');
-        }, 5000);
-    }
-
-    // --- GEMINI API FONKSİYONLARI ---
-
-    // Dosyayı Base64 string'e dönüştürür (veri tipi dahil: "data:image/jpeg;base64,...")
-    function fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            if (!file) {
-                return reject(new Error("Dosya yok."));
-            }
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
-    
-    // API çağrısını üstel geri çekilme ile yapar
-    async function callApiWithBackoff(url, payload, maxRetries = 5) {
-        for (let i = 0; i < maxRetries; i++) {
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.status === 429 || response.status >= 500) {
-                    // 429 Too Many Requests veya 5xx sunucu hataları için tekrar dene
-                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                    if (i < maxRetries - 1) {
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue; // Tekrar dene
-                    }
-                }
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`API hatası: ${response.status} ${response.statusText} - ${errorText}`);
-                }
-                
-                return await response.json();
-
-            } catch (error) {
-                if (i === maxRetries - 1) {
-                    throw error; // Maksimum denemeden sonra hatayı fırlat
-                }
-            }
-        }
-    }
-    
-    // Görselden metni çıkarır ve editöre ekler
-    async function processImage(file) {
-        if (!file) return;
-
-        extractionLoadingIndicator.classList.remove('hidden');
-        extractTextButton.disabled = true;
-
-        try {
-            // 1. Base64'e dönüştür
-            const base64DataUrl = await fileToBase64(file);
-            const [mimeType, base64Data] = base64DataUrl.split(',');
-
-            if (!base64Data) {
-                 throw new Error("Base64 veri ayrıştırılamadı.");
-            }
-            
-            // 2. API Payload oluştur
-            const userPrompt = "Bu görseldeki tüm metni çıkar ve biçimlendirilmiş metin (örneğin paragraflar, liste maddeleri) olarak geri döndür. Türkçe karakterlere ve noktalama işaretlerine dikkat et. Herhangi bir açıklayıcı cümle, başlık veya YZ mesajı ekleme. Sadece çıkarılan metni döndür.";
-            
-            const payload = {
-                contents: [{
-                    role: "user",
-                    parts: [
-                        { text: userPrompt },
-                        {
-                            inlineData: {
-                                mimeType: mimeType.split(':')[1].split(';')[0], // 'image/png'
-                                data: base64Data 
-                            }
-                        }
-                    ]
-                }],
-            };
-
-            // 3. API'yi çağır (Üstel geri çekilme ile)
-            const result = await callApiWithBackoff(apiUrl, payload);
-            
-            const extractedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            if (extractedText) {
-                // 4. Metni editöre ekle
-                // Metni bir <p> etiketi içine sararak veya olduğu gibi ekleyerek editöre ekleyebiliriz.
-                // Markdown/Text döndürdüğü için yeni bir div oluşturup innerHTML olarak eklemek,
-                // biçimlendirmeyi (paragraf, liste) korumada yardımcı olabilir.
-                
-                // Metni eklemeden önce, satır sonlarını <br> veya yeni paragraflara dönüştürerek
-                // düzenlenebilir div'e uygun hale getirelim.
-                const formattedText = extractedText
-                    .split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0)
-                    .join('<br>'); // Basitçe satır sonlarını koru
-                
-                editor.innerHTML += `<hr style="margin-top: 15px; margin-bottom: 15px;"><h4>Görselden Çıkarılan Metin:</h4>` + formattedText;
-                
-                showMessage(`Görseldeki metin (${file.name}) başarıyla çıkarıldı ve editöre eklendi.`, 'success');
-                editor.focus();
-            } else {
-                showMessage("YZ görselden metin çıkaramadı. Lütfen daha net bir görsel deneyin.", 'warning');
-            }
-
-        } catch (error) {
-            console.error("Metin Çıkarma Hatası:", error);
-            showMessage("Metin çıkarma işleminde kritik bir hata oluştu: " + error.message, 'error');
-        } finally {
-            extractionLoadingIndicator.classList.add('hidden');
-            extractTextButton.disabled = false;
-            // Dosya seçim alanını temizle
-            imageUploadInput.value = '';
-        }
-    }
-    
-    // --- PDF FONKSİYONU ---
-
-    // Metni PDF'e dönüştürme (html2canvas ile)
-    function generatePDF() {
-        const contentHtml = editor.innerHTML.trim();
-        if (!contentHtml) {
-            showMessage("Lütfen PDF oluşturmak için içerik girin.", 'warning');
-            return;
-        }
-
-        document.getElementById('download-text').classList.add('hidden');
-        document.getElementById('download-loading').classList.remove('hidden');
-        downloadPdfButton.disabled = true;
-
-        try {
-            // Biçimlendirilmiş HTML içeriğini gizli yakalama alanına yerleştir
-            pdfCaptureArea.innerHTML = contentHtml;
-
-            // PDF ayarları
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('p', 'mm', 'a4'); 
-            const source = pdfCaptureArea;
-            
-            // html2canvas ile DOM elementini tuvale (canvas) dönüştür
-            window.html2canvas(source, {
-                scale: 2, // Yüksek çözünürlük için
-                useCORS: true,
-                logging: false,
-                // letterRendering: true kaldırıldı
-            }).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                
-                const pdfWidthMM = 170; // PDF içeriği genişliği (A4 - 2 * 20mm margin)
-                const margin = 20; // 20mm kenar boşluğu
-                
-                const imgWidth = pdfWidthMM;
-                const pageHeight = doc.internal.pageSize.getHeight(); // A4 yüksekliği (297mm)
-                const imgHeight = canvas.height * imgWidth / canvas.width; // Toplam resim yüksekliği (mm)
-                const contentHeight = pageHeight - (2 * margin); // Bir sayfadaki kullanılabilir içerik yüksekliği (257mm)
-                
-                let heightLeft = imgHeight;
-                let positionY = 0; // PDF sayfası üzerinde görüntünün başlayacağı Y pozisyonu (kaydırmayı simüle etmek için negatif olacak)
-
-                // İlk sayfayı ekle
-                // Görüntünün tamamını ekle, ancak sadece sayfa boyutunda görünen kısmını PDF'e sığdır.
-                doc.addImage(imgData, 'PNG', margin, margin + positionY, imgWidth, imgHeight);
-                
-                // Kalan yükseklikten ilk sayfanın içerik alanını düş
-                heightLeft -= contentHeight; 
-
-                // Çok sayfalı döngü
-                while (heightLeft > 0) {
-                    // Pozisyonu bir sayfa içeriği yüksekliği kadar yukarı kaydır
-                    positionY -= contentHeight; 
-                    doc.addPage();
-                    
-                    // Görüntünün tamamını, yeni kaydırılmış pozisyonda ekle
-                    // (margin + positionY) kısmı, görüntünün üst kenarını yukarı taşıyarak
-                    // bir sonraki sayfa bölümünün görünmesini sağlar.
-                    doc.addImage(imgData, 'PNG', margin, margin + positionY, imgWidth, imgHeight);
-                    
-                    heightLeft -= contentHeight;
-                }
-                
-                // Önizleme ve İndirme
-                doc.save("Belgem_Bicimli_Onizle.pdf");
-                showMessage("PDF başarıyla oluşturuldu. Tarayıcınız önizleme penceresini açacaktır.", 'success');
-
-                // Temizleme
-                pdfCaptureArea.innerHTML = '';
-            }).catch(e => {
-                console.error("PDF oluşturma/html2canvas hatası:", e);
-                showMessage("PDF oluşturulurken bir hata oluştu. Biçimlendirmeyi sadeleştirmeyi deneyin (hata: Incomplete or corrupt PNG file).", 'error');
-            }).finally(() => {
-                // UI durumu geri yükle
-                document.getElementById('download-text').classList.remove('hidden');
-                document.getElementById('download-loading').classList.add('hidden');
-                downloadPdfButton.disabled = false;
+                listContainer.appendChild(itemDiv);
             });
-
-        } catch (e) {
-            console.error("PDF oluşturma hatası:", e);
-            showMessage("PDF oluşturulurken beklenmedik bir hata oluştu.", 'error');
-            document.getElementById('download-text').classList.remove('hidden');
-            document.getElementById('download-loading').classList.add('hidden');
-            downloadPdfButton.disabled = false;
         }
-    }
 
+        function createContainer() {
+            const nameInput = document.getElementById('new-container-name');
+            const passwordInput = document.getElementById('new-container-password');
+            const name = nameInput.value.trim();
+            const password = passwordInput.value.trim();
 
-    // --- EVENT LISTENERS ---
-    
-    // Yükleme sırasında varsayılan içeriği editöre yükle
-    window.onload = function() {
-        renderSidebar(); // Başlangıçta sidebar'ı doldur
-        editor.innerHTML = DEFAULT_CONTENT; // Uygulama ilk açıldığında varsayılan içeriği yükle
-    };
+            if (!name) {
+                showMessageBox("Uyarı", "Lütfen bir konum adı girin.");
+                return;
+            }
 
-    // Görsel Yükleme Butonu Tıklaması
-    extractTextButton.addEventListener('click', () => {
-        imageUploadInput.click();
-    });
+            const newContainer = {
+                id: generateId(),
+                name: name,
+                password: password, // Simple string password
+                unlocked: !password, // Automatically unlocked if no password set
+                content: []
+            };
 
-    // Görsel Seçildikten Sonra
-    imageUploadInput.addEventListener('change', (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            processImage(file);
+            containers.push(newContainer);
+            saveContainers();
+            nameInput.value = '';
+            passwordInput.value = '';
+            renderContainersList();
+            selectContainer(newContainer.id); // Select and show the new container
         }
-    });
 
-    menuButton.addEventListener('click', toggleSidebar);
-    closeSidebarButton.addEventListener('click', toggleSidebar);
-    downloadPdfButton.addEventListener('click', generatePDF);
-    saveDocumentButton.addEventListener('click', saveDocument);
-    newDocumentButton.addEventListener('click', createNewDocument);
-</script
+        function selectContainer(id) {
+            activeContainerId = id;
+            const container = getContainerById(id);
+            if (!container) return;
+
+            // Update UI list to reflect active item
+            renderContainersList();
+
+            if (container.password && !container.unlocked) {
+                showPasswordModal(container.name);
+            } else {
+                renderContainerContent(container);
+            }
+        }
+
+        // --- Password Logic ---
+
+        function showPasswordModal(containerName) {
+            document.getElementById('password-modal-name').textContent = `Konumu açmak için şifreyi girin: ${containerName}`;
+            document.getElementById('password-modal-input').value = '';
+            document.getElementById('password-modal').classList.remove('hidden');
+            document.getElementById('password-modal').classList.add('flex');
+            document.getElementById('welcome-message').style.display = 'none'; // Hide welcome message
+            document.getElementById('content-area').innerHTML = ''; // Clear main content
+        }
+
+        function closePasswordModal() {
+            document.getElementById('password-modal').classList.add('hidden');
+            document.getElementById('password-modal').classList.remove('flex');
+            activeContainerId = null; // Deselect on cancel
+            renderContainersList();
+            document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML; // Show welcome message again
+        }
+
+        function unlockContainerAttempt() {
+            const passwordInput = document.getElementById('password-modal-input').value;
+            const container = getContainerById(activeContainerId);
+
+            if (!container) {
+                closePasswordModal();
+                return;
+            }
+
+            if (container.password === passwordInput) {
+                container.unlocked = true;
+                saveContainers();
+                closePasswordModal();
+                renderContainerContent(container);
+                renderContainersList(); // Update lock icon
+            } else {
+                showMessageBox("Hata", "Yanlış şifre! Lütfen tekrar deneyin.");
+                document.getElementById('password-modal-input').value = '';
+            }
+        }
+
+        // --- Rename Logic ---
+
+        function openRenameModal(id) {
+            const container = getContainerById(id);
+            if (!container) return;
+
+            containerToRenameId = id;
+            document.getElementById('rename-modal-input').value = container.name;
+            document.getElementById('rename-modal').classList.remove('hidden');
+            document.getElementById('rename-modal').classList.add('flex');
+        }
+
+        function closeRenameModal() {
+            document.getElementById('rename-modal').classList.add('hidden');
+            document.getElementById('rename-modal').classList.remove('flex');
+            containerToRenameId = null;
+        }
+
+        function commitRename() {
+            const newName = document.getElementById('rename-modal-input').value.trim();
+            const container = getContainerById(containerToRenameId);
+
+            if (!newName) {
+                showMessageBox("Uyarı", "Lütfen geçerli bir ad girin.");
+                return;
+            }
+
+            if (container) {
+                container.name = newName;
+                saveContainers();
+                renderContainersList();
+                renderContainerContent(container); // Re-render content header
+                closeRenameModal();
+            }
+        }
+
+        // --- Content Management (Render, Add, Delete) ---
+
+        function renderContainerContent(container) {
+            const contentArea = document.getElementById('content-area');
+
+            // Header and Action Buttons
+            const headerHtml = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-6 border-orange-500/50">
+                    <h2 class="text-4xl font-extrabold text-orange-400 neon-glow mb-2 sm:mb-0 truncate">${container.name}</h2>
+                    <div class="flex space-x-3">
+                        <button onclick="openRenameModal('${container.id}')"
+                                class="bg-gray-700 hover:bg-gray-600 text-gray-200 py-1 px-3 rounded-md text-sm btn-glow">
+                            Ad Değiştir
+                        </button>
+                        <button onclick="lockContainer('${container.id}')" ${container.password ? '' : 'disabled title="Şifre yok"'}
+                                class="bg-blue-700/50 hover:bg-blue-600/70 text-white py-1 px-3 rounded-md text-sm btn-glow disabled:opacity-50 disabled:cursor-not-allowed">
+                            Kilitle
+                        </button>
+                        <button onclick="deleteContainer('${container.id}')"
+                                class="bg-red-700/50 hover:bg-red-600/70 text-white py-1 px-3 rounded-md text-sm btn-glow">
+                            Konumu Sil
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add Note/File Forms -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <!-- Add Note -->
+                    <div class="p-4 bg-gray-900 rounded-lg border border-orange-500/30">
+                        <h3 class="text-xl font-bold text-gray-200 mb-3">Yeni Not Ekle</h3>
+                        <input type="text" id="note-title" placeholder="Not Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-2 text-sm">
+                        <textarea id="note-content" rows="4" placeholder="Not içeriği..." class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg resize-none mb-2 text-sm"></textarea>
+                        <button onclick="addNoteToContainer('${container.id}')" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow text-sm">
+                            Notu Kaydet
+                        </button>
+                    </div>
+
+                    <!-- Add File/Image -->
+                    <div class="p-4 bg-gray-900 rounded-lg border border-orange-500/30">
+                        <h3 class="text-xl font-bold text-gray-200 mb-3">Dosya/Fotoğraf Yükle (Max 5MB)</h3>
+                        <p class="text-xs text-red-400 mb-3">UYARI: Büyük dosyalar tarayıcınızı yavaşlatabilir veya çökebilir (localStorage limiti!).</p>
+                        <input type="file" id="file-input-${container.id}" 
+                               class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                        <input type="text" id="file-title-${container.id}" placeholder="Dosya Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg my-2 text-sm">
+                        <button onclick="handleFileUpload('${container.id}')" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow text-sm mt-2">
+                            Yükle ve Kaydet
+                        </button>
+                    </div>
+                </div>
+
+                <h3 class="text-2xl font-bold text-gray-300 mb-4">İçerikler (${container.content.length})</h3>
+                <div id="container-content-list" class="space-y-4 min-h-[200px]">
+                    <!-- Items list will be injected here -->
+                </div>
+            `;
+            
+            contentArea.innerHTML = headerHtml;
+            renderContentItems(container);
+        }
+
+        function lockContainer(id) {
+            const container = getContainerById(id);
+            if (container && container.password) {
+                container.unlocked = false;
+                saveContainers();
+                activeContainerId = null; // Deselect
+                renderContainersList();
+                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
+            } else if (container && !container.password) {
+                showMessageBox("Uyarı", "Bu konumda şifre ayarlanmamış. Kilitlemek için önce şifre ayarlayın.");
+            }
+        }
+
+        function deleteContainer(id) {
+            if (confirm("Bu konumu ve içindeki TÜM içeriği kalıcı olarak silmek istediğinizden emin misiniz?")) {
+                containers = containers.filter(c => c.id !== id);
+                saveContainers();
+                activeContainerId = null;
+                renderContainersList();
+                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
+                showMessageBox("Başarılı", "Konum başarıyla silindi.");
+            }
+        }
+
+        function renderContentItems(container) {
+            const list = document.getElementById('container-content-list');
+            list.innerHTML = '';
+
+            if (container.content.length === 0) {
+                list.innerHTML = `<p class="text-center py-10 text-gray-500">Bu konumda henüz hiç dosya veya not yok.</p>`;
+                return;
+            }
+
+            container.content.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(item => {
+                const itemDiv = document.createElement('div');
+                let contentHtml = '';
+                let icon = '';
+                let bgColor = 'bg-gray-900';
+                
+                // Determine icon and content based on type
+                if (item.type === 'note') {
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-400 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-4.243 4.243a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414L8 10l-.257-1.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg>`;
+                    contentHtml = `<p class="text-sm text-gray-400 mt-1 whitespace-pre-wrap">${item.data.substring(0, 150)}${item.data.length > 150 ? '...' : ''}</p>`;
+                    bgColor = 'bg-gray-900/70';
+                } else if (item.type === 'image') {
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>`;
+                    contentHtml = `<img src="${item.data}" alt="${item.title}" class="max-h-24 w-auto rounded-md mt-2 border border-gray-600"/>`;
+                    bgColor = 'bg-gray-900/50';
+                } else if (item.type === 'file') {
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7z" /><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>`;
+                    contentHtml = `<a href="${item.data}" download="${item.title}" class="text-blue-400 hover:text-blue-300 text-sm underline mt-1 block">Dosyayı İndir (${item.mimeType.split('/')[1] || 'Bilinmiyor'})</a>`;
+                    bgColor = 'bg-gray-900/70';
+                }
+
+                itemDiv.className = `p-4 ${bgColor} rounded-lg border border-gray-700 flex justify-between items-start transition duration-150 hover:border-orange-500/50`;
+                itemDiv.innerHTML = `
+                    <div class="flex-grow min-w-0">
+                        <div class="flex items-center">
+                            ${icon}
+                            <div class="min-w-0">
+                                <p class="font-semibold text-lg text-gray-100 truncate">${item.title}</p>
+                                <p class="text-xs text-gray-500">${item.date}</p>
+                            </div>
+                        </div>
+                        ${contentHtml}
+                    </div>
+                    <button onclick="deleteContentItem('${container.id}', '${item.id}')"
+                            class="flex-shrink-0 ml-4 bg-red-700/50 hover:bg-red-600/70 text-white p-1 rounded-full btn-glow self-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" /></svg>
+                    </button>
+                `;
+                list.appendChild(itemDiv);
+            });
+        }
+
+        // --- Add/Delete Content ---
+
+        function addNoteToContainer(containerId) {
+            const container = getContainerById(containerId);
+            const titleInput = document.getElementById('note-title');
+            const contentInput = document.getElementById('note-content');
+            const title = titleInput.value.trim();
+            const content = contentInput.value.trim();
+
+            if (!title || !content) {
+                showMessageBox("Uyarı", "Not başlığı ve içeriği boş olamaz.");
+                return;
+            }
+
+            const newItem = {
+                id: generateId(),
+                type: 'note',
+                title: title,
+                data: content,
+                date: new Date().toLocaleString('tr-TR')
+            };
+
+            container.content.unshift(newItem); // Add to the beginning
+            saveContainers();
+            renderContainerContent(container);
+            renderContainersList(); // Update item count
+            titleInput.value = '';
+            contentInput.value = '';
+            showMessageBox("Başarılı", "Notunuz konuma eklendi.");
+        }
+
+        function handleFileUpload(containerId) {
+            const container = getContainerById(containerId);
+            const fileInput = document.getElementById(`file-input-${containerId}`);
+            const titleInput = document.getElementById(`file-title-${containerId}`);
+            const file = fileInput.files[0];
+            const title = titleInput.value.trim() || file?.name || 'Yüklenen Dosya';
+
+            if (!file) {
+                showMessageBox("Uyarı", "Lütfen bir dosya seçin.");
+                return;
+            }
+
+            // Simple size check (e.g., max 5MB)
+            const MAX_SIZE_MB = 5;
+            if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+                 showMessageBox("Hata", `Dosya boyutu ${MAX_SIZE_MB}MB'ı geçemez. Lütfen daha küçük bir dosya kullanın.`);
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const base64Data = event.target.result;
+                const fileType = file.type.startsWith('image/') ? 'image' : 'file';
+
+                const newItem = {
+                    id: generateId(),
+                    type: fileType,
+                    title: title,
+                    data: base64Data, // Base64 or DataURL
+                    mimeType: file.type,
+                    date: new Date().toLocaleString('tr-TR')
+                };
+
+                container.content.unshift(newItem);
+                saveContainers();
+                renderContainerContent(container);
+                renderContainersList(); // Update item count
+
+                // Clear inputs
+                fileInput.value = '';
+                titleInput.value = '';
+                showMessageBox("Başarılı", `${fileType === 'image' ? 'Fotoğrafınız' : 'Dosyanız'} konuma eklendi.`);
+            };
+
+            reader.onerror = function(error) {
+                console.error("Dosya okuma hatası:", error);
+                showMessageBox("Hata", "Dosya yüklenirken bir sorun oluştu.");
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function deleteContentItem(containerId, itemId) {
+            if (confirm("Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?")) {
+                const container = getContainerById(containerId);
+                if (container) {
+                    container.content = container.content.filter(item => item.id !== itemId);
+                    saveContainers();
+                    renderContainerContent(container);
+                    renderContainersList(); // Update item count
+                    showMessageBox("Başarılı", "Öğe başarıyla silindi.");
+                }
+            }
+        }
+
+        // --- Initialization ---
+        window.onload = loadContainers;
+
+    </script>
+</body>
+</html>
