@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuDoc - Güvenli Depolama Alanınız</title>
+    <title>MuDoc Secure Storage (Supabase)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* CSS for the glow/illumination effect */
         .neon-glow {
@@ -52,15 +54,53 @@
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-8">
 
     <div class="max-w-7xl mx-auto">
-        <!-- Header -->
-        <header class="text-center mb-12">
-            <h1 class="text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V2</h1>
-            <p class="mt-2 text-xl text-gray-400">Özel Konumlarınız, Şifre Korumalı Dosya ve Notlarınız.</p>
+        <!-- Header and Auth Status -->
+        <header class="text-center mb-12 flex flex-col items-center">
+            <h1 class="text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V3 (Supabase)</h1>
+            <p class="mt-2 text-xl text-gray-400">Güvenli ve Senkronize Bulut Depolama Alanınız.</p>
+            
+            <!-- Auth Status Area -->
+            <div id="auth-status" class="mt-4 p-3 bg-gray-800 rounded-xl card-glow border border-orange-500/50 flex flex-col items-center">
+                <div id="user-info" class="text-gray-300">
+                    <!-- User info will be injected here -->
+                </div>
+                <button id="auth-button" onclick="handleAuthAction()" 
+                        class="mt-3 bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-6 rounded-lg btn-glow text-sm">
+                    <!-- Button text will be injected here (Login/Logout) -->
+                </button>
+                <button onclick="toggleSettings()" class="mt-3 text-xs text-gray-400 hover:text-orange-400 transition duration-150">
+                    <span id="settings-toggle-text">⚙️ Supabase Ayarlarını Göster</span>
+                </button>
+            </div>
+            
+            <!-- NEW: Supabase Settings Panel -->
+            <div id="settings-panel" class="mt-4 p-4 bg-gray-800 rounded-xl card-glow border border-orange-500/50 hidden max-w-xl w-full">
+                <h3 class="text-lg font-bold text-orange-400 mb-3">Supabase Bağlantı Ayarları</h3>
+                <p class="text-xs text-gray-400 mb-3">Lütfen kendi Supabase Proje URL'nizi ve Anon Key'inizi girin. Bu bilgiler tarayıcınızda (localStorage) saklanacaktır.</p>
+                
+                <input type="text" id="setting-url" placeholder="Supabase Proje URL'si (örn: https://abcde.supabase.co)"
+                       class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 text-sm mb-2">
+                <input type="password" id="setting-key" placeholder="Supabase Anon (Public) Key"
+                       class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 text-sm mb-4">
+                
+                <button onclick="saveSupabaseConfig()"
+                        class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow text-sm">
+                    Ayarları Kaydet ve Uygulamayı Yeniden Başlat
+                </button>
+            </div>
         </header>
 
-        <!-- Main Content Grid: Containers List (Left) and Content Area (Right) -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="text-center py-20 text-orange-400 text-xl hidden">
+            <svg class="animate-spin h-8 w-8 text-orange-400 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Yükleniyor...
+        </div>
 
+        <!-- Main Content Grid -->
+        <div id="app-content" class="grid grid-cols-1 lg:grid-cols-4 gap-8 hidden">
             <!-- 1. Konumlar Listesi (Containers) -->
             <div class="lg:col-span-1 p-6 bg-gray-800 rounded-xl card-glow h-fit">
                 <h2 class="text-3xl font-bold mb-4 text-orange-400">Konumlar</h2>
@@ -98,6 +138,11 @@
             </div>
 
         </div>
+        
+        <!-- Auth Required Message -->
+        <div id="auth-required" class="text-center py-20 text-gray-400 text-xl">
+            <p class="mb-4">Lütfen uygulamayı kullanmak için Google ile giriş yapın.</p>
+        </div>
     </div>
 
     <!-- Message Box/Modal -->
@@ -112,7 +157,25 @@
         </div>
     </div>
 
-    <!-- Modals for Password and Rename -->
+    <!-- Confirmation Modal (Replaces confirm()) -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-red-500">
+            <h3 class="text-xl font-bold text-red-400 mb-4" id="confirm-title">Onay Gerekli</h3>
+            <p class="text-gray-300 mb-6" id="confirm-content">Emin misiniz?</p>
+            <div class="flex justify-end space-x-3">
+                <button onclick="confirmCancel()"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">
+                    İptal
+                </button>
+                <button onclick="confirmProceed()" id="confirm-button"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg btn-glow">
+                    Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals for Password and Rename (Existing modals, slightly updated) -->
     <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
         <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
             <h3 class="text-xl font-bold text-orange-400 mb-4">Konum Kilitli</h3>
@@ -147,15 +210,183 @@
     </div>
 
     <script>
-        // Global storage key
-        const CONTAINERS_KEY = 'muDocContainers';
+        // ====================================================================
+        // Supabase Configuration - HARDCODED PLACEHOLDERS (will be overridden by localStorage)
+        // ====================================================================
+        const PLACEHOLDER_URL = 'https://wlnffeirtmjikbgggckn.supabase.co'; 
+        const PLACEHOLDER_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsbmZmZWlydG1qaWbi...';
+        // ====================================================================
+        
+        let supabaseClient = null;
+        let user = null;
         let containers = [];
         let activeContainerId = null;
-        let containerToRenameId = null; // Used by the rename modal
+        let containerToRenameId = null;
+        let itemsCache = {};
+        let confirmCallback = null;
 
-        // --- Utility Functions ---
+        // --- SUPABASE CONFIGURATION MANAGEMENT (NEW) ---
 
-        /** Shows the custom message box */
+        /**
+         * Loads the Supabase config from localStorage, or uses placeholders.
+         */
+        function loadSupabaseConfig() {
+            const url = localStorage.getItem('supabase_url');
+            const key = localStorage.getItem('supabase_anon_key');
+            
+            // Set UI inputs if panel is visible
+            const urlInput = document.getElementById('setting-url');
+            const keyInput = document.getElementById('setting-key');
+            if (urlInput && keyInput) {
+                urlInput.value = url || PLACEHOLDER_URL;
+                keyInput.value = key || PLACEHOLDER_ANON_KEY;
+            }
+
+            return {
+                url: url || PLACEHOLDER_URL,
+                key: key || PLACEHOLDER_ANON_KEY,
+                isPlaceholder: !url || !key
+            };
+        }
+
+        /**
+         * Saves the current inputs to localStorage and re-initializes.
+         */
+        function saveSupabaseConfig() {
+            const url = document.getElementById('setting-url').value.trim();
+            const key = document.getElementById('setting-key').value.trim();
+            
+            if (!url || !key) {
+                showMessageBox("Hata", "Lütfen geçerli bir URL ve Anon Key girin.");
+                return;
+            }
+
+            localStorage.setItem('supabase_url', url);
+            localStorage.setItem('supabase_anon_key', key);
+            
+            showMessageBox("Başarılı", "Supabase ayarları kaydedildi. Uygulama yeniden başlatılıyor...");
+            
+            // Re-initialize the client and restart the app flow
+            initSupabaseClient();
+        }
+
+        /**
+         * Toggles the visibility of the settings panel.
+         */
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            const toggleText = document.getElementById('settings-toggle-text');
+            if (panel.classList.contains('hidden')) {
+                loadSupabaseConfig(); // Load current values into inputs when showing
+                panel.classList.remove('hidden');
+                toggleText.textContent = '⚙️ Supabase Ayarlarını Gizle';
+            } else {
+                panel.classList.add('hidden');
+                toggleText.textContent = '⚙️ Supabase Ayarlarını Göster';
+            }
+        }
+        
+        /**
+         * Initializes the Supabase client based on loaded config.
+         */
+        function initSupabaseClient() {
+            const config = loadSupabaseConfig();
+
+            if (typeof supabase === 'undefined' || !supabase.createClient) {
+                 console.error("Supabase CDN failed to load.");
+                 document.getElementById('loading-indicator').classList.add('hidden');
+                 showMessageBox("Hata", "Supabase kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.");
+                 return;
+            }
+            
+            // Create and name the client instance clearly
+            supabaseClient = supabase.createClient(config.url, config.key);
+            
+            if (config.isPlaceholder || config.url.includes(PLACEHOLDER_URL.substring(8, 26))) {
+                showMessageBox("Uyarı", "Lütfen Ayarlar panelinden SUPABASE URL ve ANON KEY'i girin/güncelleyin.");
+            }
+            
+            // Restart auth listener
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                console.log('Auth State Changed:', event, session);
+                updateAuthUI(session);
+            });
+
+            // Initial UI state setup (hiding loading indicator is done in updateAuthUI)
+            document.getElementById('loading-indicator').classList.remove('hidden');
+        }
+
+
+        // --- AUTHENTICATION ---
+
+        async function handleAuthAction() {
+            if (user) {
+                await signOut();
+            } else {
+                await signInWithGoogle();
+            }
+        }
+
+        async function signInWithGoogle() {
+            if (!supabaseClient) return showMessageBox("Hata", "Supabase istemcisi başlatılmadı. Lütfen Ayarlarınızı kontrol edin.");
+
+            const { error } = await supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + window.location.pathname // Simple redirect back
+                }
+            });
+
+            if (error) {
+                console.error("Giriş Hatası:", error);
+                showMessageBox("Giriş Hatası", "Google ile giriş yapılırken bir sorun oluştu. Detay: " + error.message);
+            }
+        }
+
+        async function signOut() {
+            if (!supabaseClient) return;
+
+            const { error } = await supabaseClient.auth.signOut();
+            if (error) {
+                console.error("Çıkış Hatası:", error);
+                showMessageBox("Çıkış Hatası", "Çıkış yapılırken bir sorun oluştu.");
+            }
+        }
+
+        function updateAuthUI(session) {
+            const authButton = document.getElementById('auth-button');
+            const userInfoDiv = document.getElementById('user-info');
+            const appContent = document.getElementById('app-content');
+            const authRequired = document.getElementById('auth-required');
+            const loadingIndicator = document.getElementById('loading-indicator');
+
+            loadingIndicator.classList.add('hidden');
+            
+            if (session && session.user) {
+                user = session.user;
+                authButton.textContent = 'Çıkış Yap';
+                authButton.classList.remove('bg-orange-600');
+                authButton.classList.add('bg-red-600');
+                userInfoDiv.innerHTML = `<p class="text-sm font-medium">Hoş geldiniz, ${user.email}</p><p class="text-xs text-gray-500">Tüm cihazlarınız senkronize!</p>`;
+                appContent.classList.remove('hidden');
+                authRequired.classList.add('hidden');
+                loadContainers(); // Load user data
+            } else {
+                user = null;
+                authButton.textContent = 'Google ile Giriş Yap';
+                authButton.classList.remove('bg-red-600');
+                authButton.classList.add('bg-orange-600');
+                userInfoDiv.innerHTML = `<p class="text-sm font-medium text-red-400">Giriş Yapılmadı</p>`;
+                appContent.classList.add('hidden');
+                authRequired.classList.remove('hidden');
+                containers = [];
+                activeContainerId = null;
+                renderContainersList();
+            }
+        }
+
+        // --- UTILITY & MODALS ---
+
         function showMessageBox(title, content) {
             document.getElementById('message-title').textContent = title;
             document.getElementById('message-content').textContent = content;
@@ -163,58 +394,379 @@
             document.getElementById('message-box').classList.add('flex');
         }
 
-        /** Hides the custom message box */
         function closeMessageBox() {
             document.getElementById('message-box').classList.add('hidden');
             document.getElementById('message-box').classList.remove('flex');
         }
-
-        /** Generates a unique ID */
-        function generateId() {
-            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-                return crypto.randomUUID();
-            }
-            return Date.now().toString(36) + Math.random().toString(36).substring(2);
+        
+        function showConfirmationModal(title, content, callback) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-content').textContent = content;
+            confirmCallback = callback;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+            document.getElementById('confirm-modal').classList.add('flex');
         }
 
-        // --- Container Data Handling ---
+        function confirmProceed() {
+            if (confirmCallback) {
+                confirmCallback(true);
+            }
+            document.getElementById('confirm-modal').classList.add('hidden');
+            document.getElementById('confirm-modal').classList.remove('flex');
+            confirmCallback = null;
+        }
 
-        function loadContainers() {
-            try {
-                const savedContainers = localStorage.getItem(CONTAINERS_KEY);
-                containers = savedContainers ? JSON.parse(savedContainers) : [];
-                renderContainersList();
+        function confirmCancel() {
+            if (confirmCallback) {
+                confirmCallback(false);
+            }
+            document.getElementById('confirm-modal').classList.add('hidden');
+            document.getElementById('confirm-modal').classList.remove('flex');
+            confirmCallback = null;
+        }
 
-                // If a container was active, try to re-select it (it will be locked/unlocked as necessary)
-                if (activeContainerId) {
-                    selectContainer(activeContainerId);
+        // --- SUPABASE CRUD - CONTAINERS ---
+
+        async function loadContainers() {
+            if (!user || !supabaseClient) return;
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            
+            const { data, error } = await supabaseClient
+                .from('containers')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            document.getElementById('loading-indicator').classList.add('hidden');
+
+            if (error) {
+                console.error('Konumlar yüklenirken hata:', error);
+                showMessageBox("Hata", "Konumlar yüklenirken bir hata oluştu. " + error.message);
+                return;
+            }
+
+            containers = data || [];
+            renderContainersList();
+
+            // Reload items for the active container if it still exists
+            if (activeContainerId) {
+                const container = getContainerById(activeContainerId);
+                if (container) {
+                     selectContainer(activeContainerId); 
+                } else {
+                    activeContainerId = null;
+                    document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
                 }
-            } catch (e) {
-                console.error("Konumlar yüklenirken hata oluştu:", e);
+            } else {
+                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
             }
         }
 
-        function saveContainers() {
+        async function createContainer() {
+            if (!user || !supabaseClient) return showMessageBox("Hata", "Lütfen önce giriş yapın.");
+
+            const nameInput = document.getElementById('new-container-name');
+            const passwordInput = document.getElementById('new-container-password');
+            const name = nameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (!name) {
+                showMessageBox("Uyarı", "Lütfen bir konum adı girin.");
+                return;
+            }
+            
+            const { data, error } = await supabaseClient
+                .from('containers')
+                .insert([
+                    { 
+                        user_id: user.id, 
+                        name: name, 
+                        password: password || null,
+                        unlocked: !password, // Status managed locally in DB object
+                        created_at: new Date().toISOString()
+                    }
+                ])
+                .select();
+
+            if (error) {
+                console.error('Konum oluşturulurken hata:', error);
+                showMessageBox("Hata", "Konum oluşturulamadı. " + error.message);
+                return;
+            }
+
+            const newContainer = data[0];
+            // Add a temporary 'content' array for local rendering consistency
+            newContainer.content = []; 
+            containers.unshift(newContainer); 
+            
+            nameInput.value = '';
+            passwordInput.value = '';
+            renderContainersList();
+            selectContainer(newContainer.id); 
+        }
+
+        async function deleteContainer(id) {
+            if (!user || !supabaseClient) return;
+
+            showConfirmationModal(
+                "Konumu Sil",
+                "Bu konumu ve içindeki TÜM içeriği (Dosya ve Notlar) kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+                async (confirmed) => {
+                    if (confirmed) {
+                        // 1. Storage'daki dosyaları (varsa) sil
+                        
+                        // 2. Veritabanındaki öğeleri sil
+                        const { error: itemsError } = await supabaseClient
+                            .from('container_items')
+                            .delete()
+                            .eq('container_id', id);
+
+                        if (itemsError) {
+                            console.error('Öğe silme hatası:', itemsError);
+                            showMessageBox("Hata", "İçerik silinirken bir sorun oluştu, ancak ana konum silinmeye devam ediyor.");
+                        }
+
+                        // 3. Konumu sil
+                        const { error: containerError } = await supabaseClient
+                            .from('containers')
+                            .delete()
+                            .eq('id', id);
+
+                        if (containerError) {
+                            console.error('Konum silme hatası:', containerError);
+                            showMessageBox("Hata", "Konum silinirken bir hata oluştu: " + containerError.message);
+                            return;
+                        }
+
+                        containers = containers.filter(c => c.id !== id);
+                        activeContainerId = null;
+                        renderContainersList();
+                        document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
+                        showMessageBox("Başarılı", "Konum başarıyla silindi.");
+                    }
+                }
+            );
+        }
+        
+        // --- SUPABASE CRUD - ITEMS (CONTENTS) ---
+
+        async function loadContainerItems(containerId) {
+            if (!user || !supabaseClient) return;
+            
+            document.getElementById('loading-indicator').classList.remove('hidden');
+
+            const { data, error } = await supabaseClient
+                .from('container_items')
+                .select('*')
+                .eq('container_id', containerId)
+                .order('created_at', { ascending: false });
+
+            document.getElementById('loading-indicator').classList.add('hidden');
+            
+            if (error) {
+                console.error('İçerikler yüklenirken hata:', error);
+                showMessageBox("Hata", "Konum içerikleri yüklenirken bir hata oluştu.");
+                return [];
+            }
+            
+            // Cache items locally
+            itemsCache[containerId] = data;
+            return data;
+        }
+
+        async function addNoteToContainer(containerId) {
+            if (!user || !supabaseClient) return;
+            const container = getContainerById(containerId);
+            const titleInput = document.getElementById('note-title');
+            const contentInput = document.getElementById('note-content');
+            const title = titleInput.value.trim();
+            const content = contentInput.value.trim();
+
+            if (!title || !content) {
+                showMessageBox("Uyarı", "Not başlığı ve içeriği boş olamaz.");
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('container_items')
+                .insert([
+                    { 
+                        container_id: containerId,
+                        user_id: user.id,
+                        title: title,
+                        type: 'note',
+                        data: content,
+                        created_at: new Date().toISOString()
+                    }
+                ])
+                .select();
+
+            if (error) {
+                console.error('Not eklenirken hata:', error);
+                showMessageBox("Hata", "Notunuz kaydedilemedi. " + error.message);
+                return;
+            }
+
+            // Update cache and UI
+            if (itemsCache[containerId]) {
+                itemsCache[containerId].unshift(data[0]);
+            } else {
+                 itemsCache[containerId] = data;
+            }
+            
+            renderContainerContent(container, itemsCache[containerId]);
+            renderContainersList(); // Update item count
+            
+            titleInput.value = '';
+            contentInput.value = '';
+            showMessageBox("Başarılı", "Notunuz konuma eklendi ve senkronize edildi.");
+        }
+
+        async function handleFileUpload(containerId) {
+            if (!user || !supabaseClient) return;
+            const container = getContainerById(containerId);
+            const fileInput = document.getElementById(`file-input-${containerId}`);
+            const titleInput = document.getElementById(`file-title-${containerId}`);
+            const file = fileInput.files[0];
+            const title = titleInput.value.trim() || file?.name || 'Yüklenen Dosya';
+
+            if (!file) {
+                showMessageBox("Uyarı", "Lütfen bir dosya seçin.");
+                return;
+            }
+            
+            // Supabase Storage uses buckets. We use 'mudoc-files' bucket.
+            const bucketName = 'mudoc-files';
+            const filePath = `${user.id}/${containerId}/${Date.now()}_${file.name}`;
+
             try {
-                localStorage.setItem(CONTAINERS_KEY, JSON.stringify(containers));
+                // 1. Upload to Supabase Storage
+                showMessageBox("Yükleniyor", "Dosya yükleniyor... Lütfen bekleyin.");
+                
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from(bucketName)
+                    .upload(filePath, file);
+
+                if (uploadError) throw new Error("Dosya yüklenemedi: " + uploadError.message);
+                
+                // 2. Get Public URL
+                const { data: urlData } = supabaseClient.storage
+                    .from(bucketName)
+                    .getPublicUrl(filePath);
+
+                if (!urlData || !urlData.publicUrl) throw new Error("Dosya URL'si alınamadı.");
+                
+                const fileType = file.type.startsWith('image/') ? 'image' : 'file';
+
+                // 3. Save item metadata to Database
+                const { data: itemData, error: itemError } = await supabaseClient
+                    .from('container_items')
+                    .insert([
+                        { 
+                            container_id: containerId,
+                            user_id: user.id,
+                            title: title,
+                            type: fileType,
+                            data: urlData.publicUrl, 
+                            mime_type: file.type,
+                            created_at: new Date().toISOString()
+                        }
+                    ])
+                    .select();
+
+                if (itemError) throw new Error("Veritabanına kayıt yapılamadı: " + itemError.message);
+
+                // Update cache and UI
+                if (itemsCache[containerId]) {
+                    itemsCache[containerId].unshift(itemData[0]);
+                } else {
+                    itemsCache[containerId] = itemData;
+                }
+                
+                renderContainerContent(container, itemsCache[containerId]);
+                renderContainersList(); 
+
+                // Clear inputs
+                fileInput.value = '';
+                titleInput.value = '';
+                closeMessageBox(); // Close loading message
+                showMessageBox("Başarılı", `${fileType === 'image' ? 'Fotoğrafınız' : 'Dosyanız'} konuma eklendi ve buluta yüklendi.`);
+
             } catch (e) {
-                console.error("Konumlar kaydedilirken hata oluştu:", e);
-                showMessageBox("Hata", "Konum verileriniz kaydedilemedi.");
+                console.error("Yükleme/Kaydetme Hatası:", e);
+                closeMessageBox(); // Close loading message
+                showMessageBox("Hata", `Dosya yüklenirken bir sorun oluştu: ${e.message}`);
             }
         }
+
+        async function deleteContentItem(containerId, itemId, itemType, encodedItemData) {
+            if (!user || !supabaseClient) return;
+            const container = getContainerById(containerId);
+            
+            // Decode the data safely embedded via Base64 in the onclick attribute
+            const itemData = atob(encodedItemData);
+
+            showConfirmationModal(
+                "Öğeyi Sil",
+                "Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?",
+                async (confirmed) => {
+                    if (confirmed) {
+                        // 1. Delete item from Database
+                        const { error: deleteError } = await supabaseClient
+                            .from('container_items')
+                            .delete()
+                            .eq('id', itemId);
+
+                        if (deleteError) {
+                            console.error('Öğe silme hatası:', deleteError);
+                            showMessageBox("Hata", "Öğe veritabanından silinemedi. Lütfen tekrar deneyin.");
+                            return;
+                        }
+                        
+                        // 2. If file/image, remove from Storage (Optional, depends on RLS/policies)
+                        if (itemType !== 'note') {
+                            // Basitleştirilmiş Storage silme: Eğer itemData bir Supabase URL'si ise, path'i çıkarmaya çalışın
+                            // Supabase URL yapısı: .../storage/v1/object/public/bucketName/path/to/file
+                            try {
+                                const urlParts = itemData.split('/public/mudoc-files/');
+                                if (urlParts.length > 1) {
+                                    const filePath = urlParts[1];
+                                    const { error: storageError } = await supabaseClient.storage
+                                        .from('mudoc-files')
+                                        .remove([filePath]);
+
+                                    if (storageError) {
+                                        console.warn("Dosya Storage'dan silinemedi, manuel kontrol gerekebilir:", storageError);
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn("Storage path ayrıştırma hatası:", e);
+                            }
+                        }
+
+                        // Update local cache and UI
+                        if (itemsCache[containerId]) {
+                            itemsCache[containerId] = itemsCache[containerId].filter(item => item.id !== itemId);
+                        }
+                        
+                        renderContainerContent(container, itemsCache[containerId]);
+                        renderContainersList(); // Update item count
+                        showMessageBox("Başarılı", "Öğe başarıyla silindi.");
+                    }
+                }
+            );
+        }
+
+        // --- UI RENDER & LOGIC ---
 
         function getContainerById(id) {
             return containers.find(c => c.id === id);
         }
 
-        // --- Container UI and Actions ---
-
         function renderContainersList() {
             const listContainer = document.getElementById('containers-list');
-            listContainer.innerHTML = ''; // Önce tüm içeriği temizle
+            listContainer.innerHTML = ''; 
 
             if (containers.length === 0) {
-                // Konteyner yoksa, "boş mesajı" HTML olarak yeniden ekle
                 listContainer.innerHTML = `
                     <p class="text-center py-4 text-gray-500 text-sm" id="no-containers-message">
                         Henüz hiç konum oluşturulmadı.
@@ -226,6 +778,9 @@
             containers.forEach(container => {
                 const isActive = container.id === activeContainerId;
                 const isLocked = container.password && !container.unlocked;
+                
+                // Use cached count if available, otherwise assume 0 for rendering list
+                const itemCount = itemsCache[container.id] ? itemsCache[container.id].length : 0; 
 
                 const itemDiv = document.createElement('div');
                 itemDiv.id = `container-${container.id}`;
@@ -236,141 +791,37 @@
                         ${isLocked ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-orange-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>'}
                         <span class="truncate">${container.name}</span>
                     </span>
-                    <span class="text-xs text-gray-400 ml-2">${container.content.length} öğe</span>
+                    <span class="text-xs text-gray-400 ml-2">${itemCount} öğe</span>
                 `;
 
                 listContainer.appendChild(itemDiv);
             });
         }
 
-        function createContainer() {
-            const nameInput = document.getElementById('new-container-name');
-            const passwordInput = document.getElementById('new-container-password');
-            const name = nameInput.value.trim();
-            const password = passwordInput.value.trim();
-
-            if (!name) {
-                showMessageBox("Uyarı", "Lütfen bir konum adı girin.");
-                return;
-            }
-
-            const newContainer = {
-                id: generateId(),
-                name: name,
-                password: password, // Simple string password
-                unlocked: !password, // Automatically unlocked if no password set
-                content: []
-            };
-
-            containers.push(newContainer);
-            saveContainers();
-            nameInput.value = '';
-            passwordInput.value = '';
-            renderContainersList();
-            selectContainer(newContainer.id); // Select and show the new container
-        }
-
-        function selectContainer(id) {
+        async function selectContainer(id) {
             activeContainerId = id;
             const container = getContainerById(id);
             if (!container) return;
 
-            // Update UI list to reflect active item
             renderContainersList();
 
             if (container.password && !container.unlocked) {
                 showPasswordModal(container.name);
             } else {
-                renderContainerContent(container);
+                const items = await loadContainerItems(id);
+                renderContainerContent(container, items);
             }
         }
-
-        // --- Password Logic ---
-
-        function showPasswordModal(containerName) {
-            document.getElementById('password-modal-name').textContent = `Konumu açmak için şifreyi girin: ${containerName}`;
-            document.getElementById('password-modal-input').value = '';
-            document.getElementById('password-modal').classList.remove('hidden');
-            document.getElementById('password-modal').classList.add('flex');
-            document.getElementById('welcome-message').style.display = 'none'; // Hide welcome message
-            document.getElementById('content-area').innerHTML = ''; // Clear main content
-        }
-
-        function closePasswordModal() {
-            document.getElementById('password-modal').classList.add('hidden');
-            document.getElementById('password-modal').classList.remove('flex');
-            activeContainerId = null; // Deselect on cancel
-            renderContainersList();
-            document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML; // Show welcome message again
-        }
-
-        function unlockContainerAttempt() {
-            const passwordInput = document.getElementById('password-modal-input').value;
-            const container = getContainerById(activeContainerId);
-
-            if (!container) {
-                closePasswordModal();
-                return;
-            }
-
-            if (container.password === passwordInput) {
-                container.unlocked = true;
-                saveContainers();
-                closePasswordModal();
-                renderContainerContent(container);
-                renderContainersList(); // Update lock icon
-            } else {
-                showMessageBox("Hata", "Yanlış şifre! Lütfen tekrar deneyin.");
-                document.getElementById('password-modal-input').value = '';
-            }
-        }
-
-        // --- Rename Logic ---
-
-        function openRenameModal(id) {
-            const container = getContainerById(id);
-            if (!container) return;
-
-            containerToRenameId = id;
-            document.getElementById('rename-modal-input').value = container.name;
-            document.getElementById('rename-modal').classList.remove('hidden');
-            document.getElementById('rename-modal').classList.add('flex');
-        }
-
-        function closeRenameModal() {
-            document.getElementById('rename-modal').classList.add('hidden');
-            document.getElementById('rename-modal').classList.remove('flex');
-            containerToRenameId = null;
-        }
-
-        function commitRename() {
-            const newName = document.getElementById('rename-modal-input').value.trim();
-            const container = getContainerById(containerToRenameId);
-
-            if (!newName) {
-                showMessageBox("Uyarı", "Lütfen geçerli bir ad girin.");
-                return;
-            }
-
-            if (container) {
-                container.name = newName;
-                saveContainers();
-                renderContainersList();
-                renderContainerContent(container); // Re-render content header
-                closeRenameModal();
-            }
-        }
-
-        // --- Content Management (Render, Add, Delete) ---
-
-        function renderContainerContent(container) {
+        
+        async function renderContainerContent(container, items) {
             const contentArea = document.getElementById('content-area');
+            const itemsToRender = items || itemsCache[container.id] || [];
 
             // Header and Action Buttons
             const headerHtml = `
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-6 border-orange-500/50">
                     <h2 class="text-4xl font-extrabold text-orange-400 neon-glow mb-2 sm:mb-0 truncate">${container.name}</h2>
-                    <div class="flex space-x-3">
+                    <div class="flex space-x-3 mt-2 sm:mt-0">
                         <button onclick="openRenameModal('${container.id}')"
                                 class="bg-gray-700 hover:bg-gray-600 text-gray-200 py-1 px-3 rounded-md text-sm btn-glow">
                             Ad Değiştir
@@ -400,8 +851,8 @@
 
                     <!-- Add File/Image -->
                     <div class="p-4 bg-gray-900 rounded-lg border border-orange-500/30">
-                        <h3 class="text-xl font-bold text-gray-200 mb-3">Dosya/Fotoğraf Yükle (Max 5MB)</h3>
-                        <p class="text-xs text-red-400 mb-3">UYARI: Büyük dosyalar tarayıcınızı yavaşlatabilir veya çökebilir (localStorage limiti!).</p>
+                        <h3 class="text-xl font-bold text-gray-200 mb-3">Dosya/Fotoğraf Yükle (Supabase Storage)</h3>
+                        <p class="text-xs text-green-400 mb-3">Dosyalarınız Supabase Storage ile güvenli bir şekilde saklanır.</p>
                         <input type="file" id="file-input-${container.id}" 
                                class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
                         <input type="text" id="file-title-${container.id}" placeholder="Dosya Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg my-2 text-sm">
@@ -411,51 +862,27 @@
                     </div>
                 </div>
 
-                <h3 class="text-2xl font-bold text-gray-300 mb-4">İçerikler (${container.content.length})</h3>
+                <h3 class="text-2xl font-bold text-gray-300 mb-4">İçerikler (${itemsToRender.length})</h3>
                 <div id="container-content-list" class="space-y-4 min-h-[200px]">
                     <!-- Items list will be injected here -->
                 </div>
             `;
             
             contentArea.innerHTML = headerHtml;
-            renderContentItems(container);
+            renderContentItemsList(container, itemsToRender);
         }
 
-        function lockContainer(id) {
-            const container = getContainerById(id);
-            if (container && container.password) {
-                container.unlocked = false;
-                saveContainers();
-                activeContainerId = null; // Deselect
-                renderContainersList();
-                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
-            } else if (container && !container.password) {
-                showMessageBox("Uyarı", "Bu konumda şifre ayarlanmamış. Kilitlemek için önce şifre ayarlayın.");
-            }
-        }
-
-        function deleteContainer(id) {
-            if (confirm("Bu konumu ve içindeki TÜM içeriği kalıcı olarak silmek istediğinizden emin misiniz?")) {
-                containers = containers.filter(c => c.id !== id);
-                saveContainers();
-                activeContainerId = null;
-                renderContainersList();
-                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
-                showMessageBox("Başarılı", "Konum başarıyla silindi.");
-            }
-        }
-
-        function renderContentItems(container) {
+        function renderContentItemsList(container, items) {
             const list = document.getElementById('container-content-list');
             list.innerHTML = '';
 
-            if (container.content.length === 0) {
+            if (items.length === 0) {
                 list.innerHTML = `<p class="text-center py-10 text-gray-500">Bu konumda henüz hiç dosya veya not yok.</p>`;
                 return;
             }
 
-            container.content.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(item => {
-                const itemDiv = document.createElement('div');
+            items.forEach(item => {
+                const date = new Date(item.created_at).toLocaleString('tr-TR');
                 let contentHtml = '';
                 let icon = '';
                 let bgColor = 'bg-gray-900';
@@ -467,14 +894,18 @@
                     bgColor = 'bg-gray-900/70';
                 } else if (item.type === 'image') {
                     icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>`;
-                    contentHtml = `<img src="${item.data}" alt="${item.title}" class="max-h-24 w-auto rounded-md mt-2 border border-gray-600"/>`;
+                    contentHtml = `<img src="${item.data}" alt="${item.title}" class="max-h-24 w-auto rounded-md mt-2 border border-gray-600" onerror="this.onerror=null;this.src='https://placehold.co/100x100/1f2937/d1d5db?text=URL%20Hatas%C4%B1';" />`;
                     bgColor = 'bg-gray-900/50';
                 } else if (item.type === 'file') {
                     icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7z" /><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>`;
-                    contentHtml = `<a href="${item.data}" download="${item.title}" class="text-blue-400 hover:text-blue-300 text-sm underline mt-1 block">Dosyayı İndir (${item.mimeType.split('/')[1] || 'Bilinmiyor'})</a>`;
+                    contentHtml = `<a href="${item.data}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm underline mt-1 block">Dosyayı Görüntüle / İndir (${item.mime_type.split('/')[1] || 'Bilinmiyor'})</a>`;
                     bgColor = 'bg-gray-900/70';
                 }
+                
+                // Base64 encode item.data to safely embed it in the onclick attribute
+                const encodedData = btoa(item.data); 
 
+                const itemDiv = document.createElement('div');
                 itemDiv.className = `p-4 ${bgColor} rounded-lg border border-gray-700 flex justify-between items-start transition duration-150 hover:border-orange-500/50`;
                 itemDiv.innerHTML = `
                     <div class="flex-grow min-w-0">
@@ -482,12 +913,12 @@
                             ${icon}
                             <div class="min-w-0">
                                 <p class="font-semibold text-lg text-gray-100 truncate">${item.title}</p>
-                                <p class="text-xs text-gray-500">${item.date}</p>
+                                <p class="text-xs text-gray-500">${date}</p>
                             </div>
                         </div>
                         ${contentHtml}
                     </div>
-                    <button onclick="deleteContentItem('${container.id}', '${item.id}')"
+                    <button onclick="deleteContentItem('${container.id}', '${item.id}', '${item.type}', '${encodedData}')"
                             class="flex-shrink-0 ml-4 bg-red-700/50 hover:bg-red-600/70 text-white p-1 rounded-full btn-glow self-start">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" /></svg>
                     </button>
@@ -495,106 +926,115 @@
                 list.appendChild(itemDiv);
             });
         }
+        
+        // --- CONTAINER METADATA ACTIONS ---
 
-        // --- Add/Delete Content ---
-
-        function addNoteToContainer(containerId) {
-            const container = getContainerById(containerId);
-            const titleInput = document.getElementById('note-title');
-            const contentInput = document.getElementById('note-content');
-            const title = titleInput.value.trim();
-            const content = contentInput.value.trim();
-
-            if (!title || !content) {
-                showMessageBox("Uyarı", "Not başlığı ve içeriği boş olamaz.");
-                return;
+        function lockContainer(id) {
+            const container = getContainerById(id);
+            if (container && container.password) {
+                // Since 'unlocked' state is not saved back to DB, we rely on password check on select.
+                // We just visually deselect and clear content.
+                container.unlocked = false; 
+                activeContainerId = null; 
+                renderContainersList();
+                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
+            } else if (container && !container.password) {
+                showMessageBox("Uyarı", "Bu konumda şifre ayarlanmamış. Kilitlemek için önce şifre ayarlayın.");
             }
-
-            const newItem = {
-                id: generateId(),
-                type: 'note',
-                title: title,
-                data: content,
-                date: new Date().toLocaleString('tr-TR')
-            };
-
-            container.content.unshift(newItem); // Add to the beginning
-            saveContainers();
-            renderContainerContent(container);
-            renderContainersList(); // Update item count
-            titleInput.value = '';
-            contentInput.value = '';
-            showMessageBox("Başarılı", "Notunuz konuma eklendi.");
         }
 
-        function handleFileUpload(containerId) {
-            const container = getContainerById(containerId);
-            const fileInput = document.getElementById(`file-input-${containerId}`);
-            const titleInput = document.getElementById(`file-title-${containerId}`);
-            const file = fileInput.files[0];
-            const title = titleInput.value.trim() || file?.name || 'Yüklenen Dosya';
+        // --- Password Logic ---
 
-            if (!file) {
-                showMessageBox("Uyarı", "Lütfen bir dosya seçin.");
-                return;
-            }
-
-            // Simple size check (e.g., max 5MB)
-            const MAX_SIZE_MB = 5;
-            if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-                 showMessageBox("Hata", `Dosya boyutu ${MAX_SIZE_MB}MB'ı geçemez. Lütfen daha küçük bir dosya kullanın.`);
-                return;
-            }
-
-            const reader = new FileReader();
-
-            reader.onload = function(event) {
-                const base64Data = event.target.result;
-                const fileType = file.type.startsWith('image/') ? 'image' : 'file';
-
-                const newItem = {
-                    id: generateId(),
-                    type: fileType,
-                    title: title,
-                    data: base64Data, // Base64 or DataURL
-                    mimeType: file.type,
-                    date: new Date().toLocaleString('tr-TR')
-                };
-
-                container.content.unshift(newItem);
-                saveContainers();
-                renderContainerContent(container);
-                renderContainersList(); // Update item count
-
-                // Clear inputs
-                fileInput.value = '';
-                titleInput.value = '';
-                showMessageBox("Başarılı", `${fileType === 'image' ? 'Fotoğrafınız' : 'Dosyanız'} konuma eklendi.`);
-            };
-
-            reader.onerror = function(error) {
-                console.error("Dosya okuma hatası:", error);
-                showMessageBox("Hata", "Dosya yüklenirken bir sorun oluştu.");
-            };
-
-            reader.readAsDataURL(file);
+        function showPasswordModal(containerName) {
+            document.getElementById('password-modal-name').textContent = `Konumu açmak için şifreyi girin: ${containerName}`;
+            document.getElementById('password-modal-input').value = '';
+            document.getElementById('password-modal').classList.remove('hidden');
+            document.getElementById('password-modal').classList.add('flex');
+            document.getElementById('content-area').innerHTML = ''; // Clear main content
         }
 
-        function deleteContentItem(containerId, itemId) {
-            if (confirm("Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?")) {
-                const container = getContainerById(containerId);
-                if (container) {
-                    container.content = container.content.filter(item => item.id !== itemId);
-                    saveContainers();
-                    renderContainerContent(container);
-                    renderContainersList(); // Update item count
-                    showMessageBox("Başarılı", "Öğe başarıyla silindi.");
+        function closePasswordModal() {
+            document.getElementById('password-modal').classList.add('hidden');
+            document.getElementById('password-modal').classList.remove('flex');
+            activeContainerId = null; // Deselect on cancel
+            renderContainersList();
+            document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML; // Show welcome message again
+        }
+
+        async function unlockContainerAttempt() {
+            const passwordInput = document.getElementById('password-modal-input').value;
+            const container = getContainerById(activeContainerId);
+
+            if (!container) {
+                closePasswordModal();
+                return;
+            }
+
+            if (container.password === passwordInput) {
+                container.unlocked = true; // Local unlock
+                closePasswordModal();
+                const items = await loadContainerItems(container.id);
+                renderContainerContent(container, items);
+                renderContainersList(); // Update lock icon
+            } else {
+                showMessageBox("Hata", "Yanlış şifre! Lütfen tekrar deneyin.");
+                document.getElementById('password-modal-input').value = '';
+            }
+        }
+        
+        // --- Rename Logic (Updates DB) ---
+
+        function openRenameModal(id) {
+            const container = getContainerById(id);
+            if (!container) return;
+
+            containerToRenameId = id;
+            document.getElementById('rename-modal-input').value = container.name;
+            document.getElementById('rename-modal').classList.remove('hidden');
+            document.getElementById('rename-modal').classList.add('flex');
+        }
+
+        function closeRenameModal() {
+            document.getElementById('rename-modal').classList.add('hidden');
+            document.getElementById('rename-modal').classList.remove('flex');
+            containerToRenameId = null;
+        }
+
+        async function commitRename() {
+            if (!user || !supabaseClient) return;
+            const newName = document.getElementById('rename-modal-input').value.trim();
+            const id = containerToRenameId;
+            const container = getContainerById(id);
+
+            if (!newName) {
+                showMessageBox("Uyarı", "Lütfen geçerli bir ad girin.");
+                return;
+            }
+
+            if (container) {
+                const { error } = await supabaseClient
+                    .from('containers')
+                    .update({ name: newName })
+                    .eq('id', id);
+                    
+                if (error) {
+                    console.error('Yeniden adlandırma hatası:', error);
+                    showMessageBox("Hata", "Konum yeniden adlandırılamadı. " + error.message);
+                    return;
                 }
+
+                container.name = newName; // Local update
+                renderContainersList();
+                renderContainerContent(container, itemsCache[id]); // Re-render content header
+                closeRenameModal();
+                showMessageBox("Başarılı", "Konum adı güncellendi.");
             }
         }
 
         // --- Initialization ---
-        window.onload = loadContainers;
+        
+        // Start the process by initializing the Supabase client with saved or placeholder keys
+        initSupabaseClient();
 
     </script>
 </body>
