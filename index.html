@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuDoc - Güvenli Depolama Alanınız (Firebase)</title>
+    <title>MuDoc - Kalıcı Hesaplar ve Kimlik Doğrulama</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -26,22 +26,22 @@
         }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0d0d0d; /* Slightly darker black background */
+            background-color: #0d0d0d;
         }
         /* Scrollbar styling for a dark theme */
         ::-webkit-scrollbar {
             width: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #1f2937; /* Dark gray for track */
+            background: #1f2937;
         }
         ::-webkit-scrollbar-thumb {
-            background: #f97316; /* Orange for thumb */
+            background: #f97316;
             border-radius: 4px;
         }
         .container-item.active {
-            background-color: #f97316; /* Orange-600 */
-            color: #1f2937; /* Dark text */
+            background-color: #f97316;
+            color: #1f2937;
             font-weight: 600;
         }
         .container-item.active .text-gray-400 {
@@ -61,10 +61,21 @@
     <!-- Main Content Grid -->
     <div id="main-app-content" class="max-w-7xl mx-auto hidden">
         <!-- Header -->
-        <header class="text-center mb-6 border-b border-gray-700 pb-4">
-            <h1 class="text-5xl sm:text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V2 (Real-time)</h1>
-            <p class="mt-1 text-lg text-gray-400">Kullanıcı ID: <span id="user-id-display" class="font-mono text-xs bg-gray-700 rounded-md px-2 py-0.5 ml-1">Yükleniyor...</span></p>
-            <p class="mt-2 text-xl text-gray-400">Özel Konumlarınız, Şifre Korumalı Dosya ve Notlarınız.</p>
+        <header class="text-center mb-6 border-b border-gray-700 pb-4 flex justify-between items-center">
+            <div class="flex-1 text-left">
+                <button id="auth-button" onclick="openAuthModal()" 
+                        class="bg-gray-700 hover:bg-gray-600 text-gray-200 py-2 px-4 rounded-lg text-sm btn-glow flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
+                    <span id="auth-status-text">Hesap</span>
+                </button>
+            </div>
+            <div class="flex-2 text-center">
+                <h1 class="text-5xl sm:text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V3</h1>
+                <p class="mt-1 text-lg text-gray-400">
+                    Kullanıcı ID: <span id="user-id-display" class="font-mono text-xs bg-gray-700 rounded-md px-2 py-0.5 ml-1">Yükleniyor...</span>
+                </p>
+            </div>
+            <div class="flex-1"></div> <!-- Spacer -->
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -107,7 +118,9 @@
         </div>
     </div>
 
-    <!-- Message Box/Modal -->
+    <!-- --- Modals --- -->
+
+    <!-- Message Box/Modal (General purpose) -->
     <div id="message-box" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
         <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
             <h3 class="text-xl font-bold text-orange-400 mb-4" id="message-title">Bilgi</h3>
@@ -136,8 +149,8 @@
             </div>
         </div>
     </div>
-
-    <!-- Modals for Password and Rename -->
+    
+    <!-- Password Modal -->
     <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
         <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
             <h3 class="text-xl font-bold text-orange-400 mb-4">Konum Kilitli</h3>
@@ -154,7 +167,22 @@
             </button>
         </div>
     </div>
+    
+    <!-- Auth Modal (Sign-In/Sign-Up) -->
+    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 p-8 rounded-xl card-glow max-w-md w-full border border-green-500">
+            <h3 class="text-2xl font-bold text-green-400 mb-4">Kullanıcı Hesabı</h3>
+            <div id="auth-content">
+                <!-- Dynamic content based on auth state will be placed here -->
+            </div>
+            <button onclick="closeAuthModal()"
+                    class="w-full mt-6 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-lg">
+                Kapat
+            </button>
+        </div>
+    </div>
 
+    <!-- Rename Modal -->
     <div id="rename-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
         <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
             <h3 class="text-xl font-bold text-orange-400 mb-4">Konumu Yeniden Adlandır</h3>
@@ -171,29 +199,30 @@
         </div>
     </div>
 
+
     <script type="module">
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global Firebase variables (MUST be defined)
+        // Global Firebase variables
         let app = null;
         let db = null;
         let auth = null;
         let userId = null;
         let appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         let isAuthReady = false;
+        let isAnonymous = false;
 
         // --- Application State ---
         let containers = [];
         let activeContainerId = null;
         let containerToRenameId = null; 
-        let confirmationResolver = null; // For the custom confirmation modal
+        let confirmationResolver = null;
 
-        // --- Utility Functions ---
+        // --- Utility Functions (MessageBox, Confirmation, ID generation are the same) ---
 
-        /** Shows the custom message box */
         function showMessageBox(title, content) {
             document.getElementById('message-title').textContent = title;
             document.getElementById('message-content').textContent = content;
@@ -201,13 +230,11 @@
             document.getElementById('message-box').classList.add('flex');
         }
 
-        /** Hides the custom message box */
         function closeMessageBox() {
             document.getElementById('message-box').classList.add('hidden');
             document.getElementById('message-box').classList.remove('flex');
         }
 
-        /** Shows the custom confirmation box and returns a Promise */
         function showConfirmationBox(title, content) {
             document.getElementById('confirm-title').textContent = title;
             document.getElementById('confirm-content').textContent = content;
@@ -219,7 +246,6 @@
             });
         }
 
-        /** Handles confirmation modal button clicks */
         function commitConfirmation(result) {
             document.getElementById('confirmation-modal').classList.add('hidden');
             document.getElementById('confirmation-modal').classList.remove('flex');
@@ -229,7 +255,6 @@
             }
         }
 
-        /** Generates a unique ID */
         function generateId() {
             if (typeof crypto !== 'undefined' && crypto.randomUUID) {
                 return crypto.randomUUID();
@@ -243,47 +268,52 @@
 
         // --- Firebase/Firestore Logic ---
 
-        /** Firestore Helpers - Private Data Path */
         function getUserContainersCollection() {
             // Path: /artifacts/{appId}/users/{userId}/muDocContainers
             if (!db || !userId) return null;
             return collection(db, 'artifacts', appId, 'users', userId, 'muDocContainers');
         }
 
-        /** Real-time Listener for Containers */
+        // Tracks whether the listener has been setup to prevent multiple calls
+        let isListenerSetup = false;
+        let unsubscribeContainers = null;
+
         function setupContainerListener() {
+            if (isListenerSetup && unsubscribeContainers) {
+                unsubscribeContainers(); // Stop the old listener if exists
+            }
+
             const containersCol = getUserContainersCollection();
             if (!containersCol) {
-                showMessageBox("Hata", "Veri dinleyicisi başlatılamadı: Kimlik doğrulama hazır değil.");
+                // If user logs out, we clear the data and show no containers.
+                containers = [];
+                activeContainerId = null;
+                renderContainersList();
+                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
+                isListenerSetup = false;
                 return;
             }
 
-            // Listen for real-time changes
-            onSnapshot(containersCol, (snapshot) => {
+            // Start new listener
+            unsubscribeContainers = onSnapshot(containersCol, (snapshot) => {
                 const newContainers = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
                     newContainers.push({
                         id: doc.id,
                         ...data,
-                        // 'unlocked' state is transient and defaults to locked if password exists
                         content: data.content || [],
                         unlocked: data.password ? false : true 
                     });
                 });
 
-                // Sort containers by name before setting state
                 newContainers.sort((a, b) => a.name.localeCompare(b.name, 'tr', { sensitivity: 'base' }));
 
                 containers = newContainers;
                 renderContainersList();
 
-                // If an active container exists, try to select/re-render it
                 if (activeContainerId) {
-                    selectContainer(activeContainerId, false); // Do not force password prompt on data update
-                } else if (containers.length > 0) {
-                     // Optionally auto-select the first one if nothing is active
-                     // selectContainer(containers[0].id); 
+                    selectContainer(activeContainerId, false);
                 }
 
                 // Hide loading screen after first successful data load
@@ -292,24 +322,27 @@
 
             }, (error) => {
                 console.error("Firestore Dinleme Hatası:", error);
-                showMessageBox("Hata", "Veritabanı bağlantısı kesildi veya okuma yetkisi yok.");
+                // If permission denied, ensure UI reflects the issue.
+                if (error.code === 'permission-denied') {
+                    showMessageBox("Hata", "Veritabanı erişim hatası. Giriş yapmanız gerekebilir.");
+                } else {
+                    showMessageBox("Hata", "Veritabanı bağlantısı kesildi veya bir hata oluştu.");
+                }
             });
+            isListenerSetup = true;
         }
 
-        /** Saves changes to a single container document in Firestore */
         async function updateContainer(container) {
             if (!isAuthReady || !db || !container.id) {
                 showMessageBox("Hata", "Kimlik doğrulama veya veritabanı hazır değil.");
                 return;
             }
 
-            // Create a database-safe copy (don't store the local 'unlocked' state)
             const { unlocked, id, ...dataToSave } = container;
 
             try {
                 const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
                 await setDoc(containerRef, dataToSave, { merge: true });
-                // UI update is handled by the real-time listener (onSnapshot)
             } catch (e) {
                 console.error("Konteyner güncellenirken hata:", e);
                 showMessageBox("Hata", "Konum güncellenemedi. Lütfen internet bağlantınızı kontrol edin.");
@@ -318,6 +351,30 @@
 
 
         // --- Auth & Initialization ---
+
+        function updateAuthUI() {
+            const authStatusText = document.getElementById('auth-status-text');
+            const userIdDisplay = document.getElementById('user-id-display');
+
+            if (userId) {
+                userIdDisplay.textContent = userId;
+            } else {
+                userIdDisplay.textContent = 'Oturum Yok';
+            }
+
+            if (isAnonymous) {
+                authStatusText.textContent = 'Anonim (Giriş Yap)';
+                authStatusText.classList.remove('text-green-400');
+            } else if (userId && auth.currentUser && auth.currentUser.email) {
+                authStatusText.textContent = `Giriş Yapıldı (${auth.currentUser.email})`;
+                authStatusText.classList.add('text-green-400');
+            } else if (userId) {
+                authStatusText.textContent = 'Anonim Oturum';
+                authStatusText.classList.remove('text-green-400');
+            } else {
+                 authStatusText.textContent = 'Hesap';
+            }
+        }
 
         async function initFirebase() {
             try {
@@ -329,61 +386,203 @@
                     return;
                 }
 
-                // 1. Initialize App
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                // setLogLevel('Debug'); // Enable for debugging
+                setLogLevel('error'); // Use 'error' to suppress warnings
 
-                // 2. Handle Authentication
-                // This promise resolves after the auth state is settled
-                await new Promise((resolve, reject) => {
-                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-                        unsubscribe(); 
-                        if (user) {
-                            userId = user.uid;
-                        } else {
-                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                try {
-                                    const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
-                                    userId = userCredential.user.uid;
-                                } catch (e) {
-                                    await signInAnonymously(auth);
-                                    userId = auth.currentUser.uid;
-                                }
-                            } else {
-                                await signInAnonymously(auth);
-                                userId = auth.currentUser.uid;
-                            }
-                        }
+                // --- Auth State Listener ---
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAnonymous = user.isAnonymous;
                         isAuthReady = true;
-                        document.getElementById('user-id-display').textContent = userId;
-                        resolve();
-                    }, reject);
-                });
 
-                // 3. Start real-time data listener 
-                setupContainerListener();
+                        updateAuthUI();
+                        setupContainerListener();
+
+                    } else {
+                        // No user signed in (e.g., after signOut)
+                        userId = null;
+                        isAnonymous = false;
+                        isAuthReady = true;
+                        
+                        updateAuthUI();
+                        setupContainerListener(); // This will clear the UI
+
+                        // If no user is present, and we have the initial token, sign in with it.
+                        // This ensures the canvas environment user is restored if they log out of email/pass
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            try {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } catch (e) {
+                                // If custom token fails, fall back to anonymous
+                                await signInAnonymously(auth);
+                            }
+                        } else {
+                            // Standard anonymous sign-in if no special token
+                             await signInAnonymously(auth);
+                        }
+                    }
+                    
+                    document.getElementById('loading-overlay').classList.add('hidden');
+                    document.getElementById('main-app-content').classList.remove('hidden');
+                });
+                
+                // --- Initial Auth Check (for existing custom/anon token) ---
+                if (!auth.currentUser) {
+                    // Force the initial sign-in if the listener hasn't found a user yet.
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        try {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } catch (e) {
+                            await signInAnonymously(auth);
+                        }
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                }
 
             } catch (e) {
                 console.error("Firebase Initialization or Auth Failed:", e);
                 showMessageBox("Kritik Hata", "Giriş yapılırken veya veritabanı başlatılırken kritik bir hata oluştu.");
                 document.getElementById('loading-overlay').classList.add('hidden');
-                document.getElementById('main-app-content').classList.remove('hidden'); // Show content even if broken
+                document.getElementById('main-app-content').classList.remove('hidden');
             }
         }
 
 
-        // --- Container UI and Actions ---
+        // --- Authentication Modal Logic ---
+
+        function openAuthModal() {
+            renderAuthContent();
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-modal').classList.add('flex');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('auth-modal').classList.remove('flex');
+        }
+
+        function renderAuthContent() {
+            const contentDiv = document.getElementById('auth-content');
+            
+            if (auth.currentUser && auth.currentUser.email) {
+                // User is signed in with email/password
+                contentDiv.innerHTML = `
+                    <p class="text-gray-300 mb-4">Şu an kalıcı bir hesapla giriş yapmış durumdasınız.</p>
+                    <p class="text-lg font-semibold text-green-400 mb-6">E-posta: ${auth.currentUser.email}</p>
+                    <button onclick="handleSignOut()"
+                            class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg btn-glow">
+                        Çıkış Yap
+                    </button>
+                `;
+            } else if (auth.currentUser && auth.currentUser.isAnonymous) {
+                // User is anonymous
+                contentDiv.innerHTML = `
+                    <p class="text-gray-300 mb-4">Şu an anonim bir oturumdasınız. Verilerinize yalnızca bu cihazdan erişebilirsiniz. Kalıcı bir hesap oluşturmak veya giriş yapmak için aşağıdaki formu kullanın.</p>
+                    <hr class="border-gray-700 my-4">
+
+                    <input type="email" id="auth-email" placeholder="E-posta Adresi"
+                           class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500">
+                    <input type="password" id="auth-password" placeholder="Şifre (min 6 karakter)"
+                           class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500">
+                    
+                    <button onclick="handleSignIn()"
+                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg btn-glow mb-3">
+                        Giriş Yap
+                    </button>
+                    <button onclick="handleSignUp()"
+                            class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg btn-glow">
+                        Yeni Hesap Oluştur
+                    </button>
+                `;
+            } else {
+                 // Fallback if auth state is ambiguous or null (shouldn't happen often)
+                contentDiv.innerHTML = `<p class="text-gray-400">Kimlik doğrulama durumu yükleniyor...</p>`;
+            }
+        }
+
+        async function handleSignUp() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+
+            if (!email || !password) {
+                showMessageBox("Uyarı", "Lütfen e-posta ve şifrenizi girin.");
+                return;
+            }
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                closeAuthModal();
+                showMessageBox("Başarılı", `Hoş geldiniz, ${email}! Hesabınız başarıyla oluşturuldu ve giriş yapıldı. Mevcut anonim oturumunuzdaki verilere artık erişilemiyor.`);
+                // The onAuthStateChanged listener handles state change and data loading.
+            } catch (error) {
+                console.error("Kayıt Hatası:", error);
+                let message = "Kayıt olurken bir hata oluştu.";
+                if (error.code === 'auth/weak-password') {
+                    message = "Şifre 6 karakterden uzun olmalıdır.";
+                } else if (error.code === 'auth/email-already-in-use') {
+                    message = "Bu e-posta adresi zaten kullanılıyor. Lütfen giriş yapın.";
+                } else if (error.code === 'auth/invalid-email') {
+                    message = "Geçersiz e-posta formatı.";
+                }
+                showMessageBox("Hata", message);
+            }
+        }
+
+        async function handleSignIn() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+
+            if (!email || !password) {
+                showMessageBox("Uyarı", "Lütfen e-posta ve şifrenizi girin.");
+                return;
+            }
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                closeAuthModal();
+                showMessageBox("Başarılı", `Tekrar hoş geldiniz, ${email}! Giriş yapıldı.`);
+                // The onAuthStateChanged listener handles state change and data loading.
+            } catch (error) {
+                console.error("Giriş Hatası:", error);
+                let message = "Giriş yapılırken bir hata oluştu.";
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+                    message = "Geçersiz kimlik bilgileri veya kullanıcı bulunamadı.";
+                }
+                showMessageBox("Hata", message);
+            }
+        }
+
+        async function handleSignOut() {
+            const confirmed = await showConfirmationBox("Çıkış Yap", "Oturumu kapatmak istediğinizden emin misiniz? Anonim oturuma geçilecektir.");
+            if (confirmed) {
+                try {
+                    await signOut(auth);
+                    closeAuthModal();
+                    showMessageBox("Başarılı", "Başarıyla çıkış yapıldı. Anonim oturuma geçiliyor...");
+                    // The onAuthStateChanged listener will automatically re-authenticate as anonymous/default user.
+                } catch (error) {
+                    console.error("Çıkış Hatası:", error);
+                    showMessageBox("Hata", "Çıkış yapılırken bir hata oluştu.");
+                }
+            }
+        }
+
+
+        // --- Container UI and Actions (Mostly the same, just ensuring calls use isAuthReady) ---
 
         function renderContainersList() {
+            // ... (Same as before)
             const listContainer = document.getElementById('containers-list');
             listContainer.innerHTML = ''; 
 
             if (containers.length === 0) {
                 listContainer.innerHTML = `
                     <p class="text-center py-4 text-gray-500 text-sm" id="no-containers-message">
-                        Henüz hiç konum oluşturulmadı.
+                        ${!isAuthReady ? 'Yükleniyor...' : 'Henüz hiç konum oluşturulmadı.'}
                     </p>
                 `;
                 return;
@@ -391,7 +590,6 @@
 
             containers.forEach(container => {
                 const isActive = container.id === activeContainerId;
-                // Check local state for unlocked status
                 const isLocked = container.password && !container.unlocked;
 
                 const itemDiv = document.createElement('div');
@@ -399,7 +597,6 @@
                 itemDiv.className = `container-item p-3 rounded-lg cursor-pointer flex justify-between items-center ${isActive ? 'active' : 'bg-gray-900 hover:bg-gray-700/50'}`;
                 itemDiv.onclick = () => selectContainer(container.id, true);
                 
-                // Content count is retrieved from Firestore data
                 const itemCount = container.content ? container.content.length : 0;
                 
                 itemDiv.innerHTML = `
@@ -413,8 +610,17 @@
                 listContainer.appendChild(itemDiv);
             });
         }
+        
+        // --- All other CRUD functions (createContainer, selectContainer, deleteContainer, updateContainer, etc.) 
+        // are functionally the same as the previous version, as they correctly rely on the global 'userId' variable 
+        // which is now dynamically updated by the onAuthStateChanged listener. ---
 
         async function createContainer() {
+            if (!isAuthReady || !userId) {
+                showMessageBox("Uyarı", "Lütfen önce giriş yapın veya oturumun yüklenmesini bekleyin.");
+                return;
+            }
+            // ... (rest of the logic is same)
             const nameInput = document.getElementById('new-container-name');
             const passwordInput = document.getElementById('new-container-password');
             const name = nameInput.value.trim();
@@ -440,7 +646,6 @@
                 nameInput.value = '';
                 passwordInput.value = '';
                 
-                // onSnapshot listener will update the list and select it automatically
                 activeContainerId = docRef.id;
 
             } catch (e) {
@@ -448,8 +653,9 @@
                 showMessageBox("Hata", "Yeni konum oluşturulamadı.");
             }
         }
-
+        
         function selectContainer(id, shouldCheckLock = true) {
+            // ... (same as before)
             activeContainerId = id;
             const container = getContainerById(id);
             if (!container) return;
@@ -459,8 +665,6 @@
             if (container.password && !container.unlocked && shouldCheckLock) {
                 showPasswordModal(container.name);
             } else {
-                // If container is locked but we are re-rendering due to data change (shouldCheckLock=false), 
-                // we should clear the content.
                 if (container.password && !container.unlocked) {
                     document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
                 } else {
@@ -476,7 +680,7 @@
                 try {
                     const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
                     await deleteDoc(containerRef);
-                    activeContainerId = null; // Deselect on delete
+                    activeContainerId = null;
                     document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
                     showMessageBox("Başarılı", "Konum başarıyla silindi.");
                 } catch (e) {
@@ -485,8 +689,6 @@
                 }
             }
         }
-        
-        // --- Password Logic ---
 
         function showPasswordModal(containerName) {
             document.getElementById('password-modal-name').textContent = `Konumu açmak için şifreyi girin: ${containerName}`;
@@ -516,7 +718,6 @@
 
             if (container.password === passwordInput) {
                 container.unlocked = true;
-                // No need to save 'unlocked' to Firestore, it's transient local state
                 closePasswordModal();
                 renderContainerContent(container);
                 renderContainersList(); 
@@ -525,8 +726,6 @@
                 document.getElementById('password-modal-input').value = '';
             }
         }
-
-        // --- Rename Logic ---
 
         function openRenameModal(id) {
             const container = getContainerById(id);
@@ -557,11 +756,8 @@
                 container.name = newName;
                 await updateContainer(container); // Save to Firestore
                 closeRenameModal();
-                // UI will be refreshed by onSnapshot
             }
         }
-
-        // --- Content Management (Render, Add, Delete) ---
 
         function renderContainerContent(container) {
             const contentArea = document.getElementById('content-area');
@@ -624,8 +820,7 @@
             const container = getContainerById(id);
             if (container && container.password) {
                 container.unlocked = false;
-                // No DB write needed, only local state change
-                activeContainerId = null; // Deselect
+                activeContainerId = null;
                 renderContainersList();
                 document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
             } else if (container && !container.password) {
@@ -634,7 +829,7 @@
         }
 
         function renderContentItems(container) {
-            const list = document.getElementById('container-content-list');
+             const list = document.getElementById('container-content-list');
             list.innerHTML = '';
 
             if (container.content.length === 0) {
@@ -648,7 +843,6 @@
                 let icon = '';
                 let bgColor = 'bg-gray-900';
                 
-                // Determine icon and content based on type
                 if (item.type === 'note') {
                     icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-4.243 4.243a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414L8 10l-.257-1.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg>`;
                     contentHtml = `<p class="text-sm text-gray-400 mt-1 whitespace-pre-wrap">${item.data.substring(0, 150)}${item.data.length > 150 ? '...' : ''}</p>`;
@@ -686,15 +880,15 @@
 
         async function addNoteToContainer(containerId) {
             const container = getContainerById(containerId);
-            const titleInput = document.getElementById('note-title');
-            const contentInput = document.getElementById('note-content');
-            const title = titleInput.value.trim();
-            const content = contentInput.value.trim();
-
             if (!container || !isAuthReady) {
                  showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
                 return;
             }
+            // ... (rest of the logic is same)
+            const titleInput = document.getElementById('note-title');
+            const contentInput = document.getElementById('note-content');
+            const title = titleInput.value.trim();
+            const content = contentInput.value.trim();
 
             if (!title || !content) {
                 showMessageBox("Uyarı", "Not başlığı ve içeriği boş olamaz.");
@@ -710,9 +904,8 @@
             };
 
             container.content.unshift(newItem); 
-            await updateContainer(container); // Save to Firestore
+            await updateContainer(container); 
 
-            // Clear inputs (no need for manual re-render, onSnapshot handles it)
             titleInput.value = '';
             contentInput.value = '';
             showMessageBox("Başarılı", "Notunuz konuma eklendi.");
@@ -720,22 +913,21 @@
 
         function handleFileUpload(containerId) {
             const container = getContainerById(containerId);
-            const fileInput = document.getElementById(`file-input-${containerId}`);
-            const titleInput = document.getElementById(`file-title-${containerId}`);
-            const file = fileInput.files[0];
-            const title = titleInput.value.trim() || file?.name || 'Yüklenen Dosya';
-
             if (!container || !isAuthReady) {
                  showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
                 return;
             }
+            // ... (rest of the logic is same)
+            const fileInput = document.getElementById(`file-input-${containerId}`);
+            const titleInput = document.getElementById(`file-title-${containerId}`);
+            const file = fileInput.files[0];
+            const title = titleInput.value.trim() || file?.name || 'Yüklenen Dosya';
 
             if (!file) {
                 showMessageBox("Uyarı", "Lütfen bir dosya seçin.");
                 return;
             }
 
-            // Simple size check (e.g., max 5MB)
             const MAX_SIZE_MB = 5;
             if (file.size > MAX_SIZE_MB * 1024 * 1024) {
                  showMessageBox("Hata", `Dosya boyutu ${MAX_SIZE_MB}MB'ı geçemez. Lütfen daha küçük bir dosya kullanın.`);
@@ -752,15 +944,14 @@
                     id: generateId(),
                     type: fileType,
                     title: title,
-                    data: base64Data, // Base64 or DataURL
+                    data: base64Data,
                     mimeType: file.type,
                     date: new Date().toLocaleString('tr-TR')
                 };
 
                 container.content.unshift(newItem);
-                await updateContainer(container); // Save to Firestore
+                await updateContainer(container);
 
-                // Clear inputs
                 fileInput.value = '';
                 titleInput.value = '';
                 showMessageBox("Başarılı", `${fileType === 'image' ? 'Fotoğrafınız' : 'Dosyanız'} konuma eklendi.`);
@@ -781,8 +972,7 @@
                 const container = getContainerById(containerId);
                 if (container) {
                     container.content = container.content.filter(item => item.id !== itemId);
-                    await updateContainer(container); // Save to Firestore
-                    // UI will be updated by onSnapshot.
+                    await updateContainer(container);
                     showMessageBox("Başarılı", "Öğe başarıyla silindi.");
                 }
             }
