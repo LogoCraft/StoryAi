@@ -223,19 +223,19 @@
 
         // --- Utility Functions (MessageBox, Confirmation, ID generation are the same) ---
 
-        function showMessageBox(title, content) {
+        window.showMessageBox = function(title, content) {
             document.getElementById('message-title').textContent = title;
             document.getElementById('message-content').textContent = content;
             document.getElementById('message-box').classList.remove('hidden');
             document.getElementById('message-box').classList.add('flex');
         }
 
-        function closeMessageBox() {
+        window.closeMessageBox = function() {
             document.getElementById('message-box').classList.add('hidden');
             document.getElementById('message-box').classList.remove('flex');
         }
 
-        function showConfirmationBox(title, content) {
+        window.showConfirmationBox = function(title, content) {
             document.getElementById('confirm-title').textContent = title;
             document.getElementById('confirm-content').textContent = content;
             document.getElementById('confirmation-modal').classList.remove('hidden');
@@ -246,7 +246,7 @@
             });
         }
 
-        function commitConfirmation(result) {
+        window.commitConfirmation = function(result) {
             document.getElementById('confirmation-modal').classList.add('hidden');
             document.getElementById('confirmation-modal').classList.remove('flex');
             if (confirmationResolver) {
@@ -452,15 +452,15 @@
         }
 
 
-        // --- Authentication Modal Logic ---
+        // --- Authentication Modal Logic (FIXED: Attached to window) ---
 
-        function openAuthModal() {
+        window.openAuthModal = function() {
             renderAuthContent();
             document.getElementById('auth-modal').classList.remove('hidden');
             document.getElementById('auth-modal').classList.add('flex');
         }
 
-        function closeAuthModal() {
+        window.closeAuthModal = function() {
             document.getElementById('auth-modal').classList.add('hidden');
             document.getElementById('auth-modal').classList.remove('flex');
         }
@@ -504,7 +504,7 @@
             }
         }
 
-        async function handleSignUp() {
+        window.handleSignUp = async function() {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
 
@@ -532,7 +532,7 @@
             }
         }
 
-        async function handleSignIn() {
+        window.handleSignIn = async function() {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
 
@@ -556,7 +556,7 @@
             }
         }
 
-        async function handleSignOut() {
+        window.handleSignOut = async function() {
             const confirmed = await showConfirmationBox("Çıkış Yap", "Oturumu kapatmak istediğinizden emin misiniz? Anonim oturuma geçilecektir.");
             if (confirmed) {
                 try {
@@ -615,7 +615,7 @@
         // are functionally the same as the previous version, as they correctly rely on the global 'userId' variable 
         // which is now dynamically updated by the onAuthStateChanged listener. ---
 
-        async function createContainer() {
+        window.createContainer = async function() {
             if (!isAuthReady || !userId) {
                 showMessageBox("Uyarı", "Lütfen önce giriş yapın veya oturumun yüklenmesini bekleyin.");
                 return;
@@ -673,7 +673,7 @@
             }
         }
 
-        async function deleteContainer(id) {
+        window.deleteContainer = async function(id) {
             const confirmed = await showConfirmationBox("Konumu Sil", "Bu konumu ve içindeki TÜM içeriği kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.");
 
             if (confirmed) {
@@ -690,24 +690,7 @@
             }
         }
 
-        function showPasswordModal(containerName) {
-            document.getElementById('password-modal-name').textContent = `Konumu açmak için şifreyi girin: ${containerName}`;
-            document.getElementById('password-modal-input').value = '';
-            document.getElementById('password-modal').classList.remove('hidden');
-            document.getElementById('password-modal').classList.add('flex');
-            document.getElementById('welcome-message').style.display = 'none'; 
-            document.getElementById('content-area').innerHTML = ''; 
-        }
-
-        function closePasswordModal() {
-            document.getElementById('password-modal').classList.add('hidden');
-            document.getElementById('password-modal').classList.remove('flex');
-            activeContainerId = null; 
-            renderContainersList();
-            document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML; 
-        }
-
-        function unlockContainerAttempt() {
+        window.unlockContainerAttempt = function() {
             const passwordInput = document.getElementById('password-modal-input').value;
             const container = getContainerById(activeContainerId);
 
@@ -726,8 +709,25 @@
                 document.getElementById('password-modal-input').value = '';
             }
         }
+        
+        window.showPasswordModal = function(containerName) {
+            document.getElementById('password-modal-name').textContent = `Konumu açmak için şifreyi girin: ${containerName}`;
+            document.getElementById('password-modal-input').value = '';
+            document.getElementById('password-modal').classList.remove('hidden');
+            document.getElementById('password-modal').classList.add('flex');
+            document.getElementById('welcome-message').style.display = 'none'; 
+            document.getElementById('content-area').innerHTML = ''; 
+        }
 
-        function openRenameModal(id) {
+        window.closePasswordModal = function() {
+            document.getElementById('password-modal').classList.add('hidden');
+            document.getElementById('password-modal').classList.remove('flex');
+            activeContainerId = null; 
+            renderContainersList();
+            document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML; 
+        }
+
+        window.openRenameModal = function(id) {
             const container = getContainerById(id);
             if (!container) return;
 
@@ -737,13 +737,13 @@
             document.getElementById('rename-modal').classList.add('flex');
         }
 
-        function closeRenameModal() {
+        window.closeRenameModal = function() {
             document.getElementById('rename-modal').classList.add('hidden');
             document.getElementById('rename-modal').classList.remove('flex');
             containerToRenameId = null;
         }
 
-        async function commitRename() {
+        window.commitRename = async function() {
             const newName = document.getElementById('rename-modal-input').value.trim();
             const container = getContainerById(containerToRenameId);
 
@@ -816,7 +816,7 @@
             renderContentItems(container);
         }
 
-        function lockContainer(id) {
+        window.lockContainer = function(id) {
             const container = getContainerById(id);
             if (container && container.password) {
                 container.unlocked = false;
@@ -878,7 +878,7 @@
             });
         }
 
-        async function addNoteToContainer(containerId) {
+        window.addNoteToContainer = async function(containerId) {
             const container = getContainerById(containerId);
             if (!container || !isAuthReady) {
                  showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
@@ -911,7 +911,7 @@
             showMessageBox("Başarılı", "Notunuz konuma eklendi.");
         }
 
-        function handleFileUpload(containerId) {
+        window.handleFileUpload = async function(containerId) {
             const container = getContainerById(containerId);
             if (!container || !isAuthReady) {
                  showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
@@ -965,7 +965,7 @@
             reader.readAsDataURL(file);
         }
 
-        async function deleteContentItem(containerId, itemId) {
+        window.deleteContentItem = async function(containerId, itemId) {
             const confirmed = await showConfirmationBox("Öğeyi Sil", "Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?");
 
             if (confirmed) {
