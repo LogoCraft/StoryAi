@@ -316,9 +316,8 @@
                     selectContainer(activeContainerId, false);
                 }
 
-                // Hide loading screen after first successful data load
-                document.getElementById('loading-overlay').classList.add('hidden');
-                document.getElementById('main-app-content').classList.remove('hidden');
+                // NOTE: Removed loading screen hide logic from here to prevent getting stuck if onSnapshot fails.
+                // It now hides in onAuthStateChanged.
 
             }, (error) => {
                 console.error("Firestore Dinleme Hatası:", error);
@@ -391,6 +390,8 @@
                 auth = getAuth(app);
                 setLogLevel('error'); // Use 'error' to suppress warnings
 
+                let initialAuthAttempted = false;
+
                 // --- Auth State Listener ---
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
@@ -410,28 +411,35 @@
                         updateAuthUI();
                         setupContainerListener(); // This will clear the UI
 
-                        // If no user is present, and we have the initial token, sign in with it.
-                        // This ensures the canvas environment user is restored if they log out of email/pass
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            try {
-                                await signInWithCustomToken(auth, __initial_auth_token);
-                            } catch (e) {
-                                // If custom token fails, fall back to anonymous
+                        // Only attempt initial sign-in if the listener reports no user
+                        // and we haven't tried yet in the async block below.
+                        if (!initialAuthAttempted) {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                try {
+                                    await signInWithCustomToken(auth, __initial_auth_token);
+                                } catch (e) {
+                                    // If custom token fails, fall back to anonymous
+                                    await signInAnonymously(auth);
+                                }
+                            } else {
+                                // Standard anonymous sign-in if no special token
                                 await signInAnonymously(auth);
                             }
-                        } else {
-                            // Standard anonymous sign-in if no special token
-                             await signInAnonymously(auth);
                         }
                     }
                     
-                    document.getElementById('loading-overlay').classList.add('hidden');
-                    document.getElementById('main-app-content').classList.remove('hidden');
+                    // GÜNCELLEME: Yükleme ekranını kimlik doğrulama durumu belirlenir belirlenmez gizle.
+                    // Bu, veritabanı yüklenirken takılma sorununu önler.
+                    if (isAuthReady) {
+                        document.getElementById('loading-overlay').classList.add('hidden');
+                        document.getElementById('main-app-content').classList.remove('hidden');
+                    }
                 });
                 
-                // --- Initial Auth Check (for existing custom/anon token) ---
+                // --- Initial Auth Check (to kick off the listener if needed) ---
                 if (!auth.currentUser) {
-                    // Force the initial sign-in if the listener hasn't found a user yet.
+                    // This block ensures an initial user is present to trigger the onAuthStateChanged listener
+                    initialAuthAttempted = true; // Set flag to prevent double execution in listener's else block
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         try {
                             await signInWithCustomToken(auth, __initial_auth_token);
