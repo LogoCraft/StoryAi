@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuDoc - Güvenli Depolama Alanınız</title>
+    <title>MuDoc - Güvenli Depolama Alanınız (Firebase)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -51,14 +51,22 @@
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-8">
 
-    <div class="max-w-7xl mx-auto">
+    <!-- Loading Screen (Displayed until Firebase Auth is ready and data is loaded) -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-[100]">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-orange-500"></div>
+        <p class="mt-4 text-orange-400 text-lg font-semibold">Güvenli Giriş Yapılıyor...</p>
+        <p class="mt-2 text-gray-500 text-sm">Verileriniz sunucudan yükleniyor.</p>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div id="main-app-content" class="max-w-7xl mx-auto hidden">
         <!-- Header -->
-        <header class="text-center mb-12">
-            <h1 class="text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V2</h1>
+        <header class="text-center mb-6 border-b border-gray-700 pb-4">
+            <h1 class="text-5xl sm:text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V2 (Real-time)</h1>
+            <p class="mt-1 text-lg text-gray-400">Kullanıcı ID: <span id="user-id-display" class="font-mono text-xs bg-gray-700 rounded-md px-2 py-0.5 ml-1">Yükleniyor...</span></p>
             <p class="mt-2 text-xl text-gray-400">Özel Konumlarınız, Şifre Korumalı Dosya ve Notlarınız.</p>
         </header>
 
-        <!-- Main Content Grid: Containers List (Left) and Content Area (Right) -->
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
 
             <!-- 1. Konumlar Listesi (Containers) -->
@@ -96,7 +104,6 @@
                     <!-- Dynamic content will be loaded here -->
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -109,6 +116,24 @@
                     class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow">
                 Kapat
             </button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal (for delete actions) -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-red-500">
+            <h3 class="text-xl font-bold text-red-400 mb-4" id="confirm-title">Onay Gerekli</h3>
+            <p class="text-gray-300 mb-6" id="confirm-content">Emin misiniz?</p>
+            <div class="flex space-x-4">
+                <button onclick="commitConfirmation(true)"
+                        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg btn-glow">
+                    Evet, Onaylıyorum
+                </button>
+                <button onclick="commitConfirmation(false)"
+                        class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-lg">
+                    İptal
+                </button>
+            </div>
         </div>
     </div>
 
@@ -146,12 +171,25 @@
         </div>
     </div>
 
-    <script>
-        // Global storage key
-        const CONTAINERS_KEY = 'muDocContainers';
+    <script type="module">
+        // --- Firebase Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase variables (MUST be defined)
+        let app = null;
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let isAuthReady = false;
+
+        // --- Application State ---
         let containers = [];
         let activeContainerId = null;
-        let containerToRenameId = null; // Used by the rename modal
+        let containerToRenameId = null; 
+        let confirmationResolver = null; // For the custom confirmation modal
 
         // --- Utility Functions ---
 
@@ -169,6 +207,28 @@
             document.getElementById('message-box').classList.remove('flex');
         }
 
+        /** Shows the custom confirmation box and returns a Promise */
+        function showConfirmationBox(title, content) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-content').textContent = content;
+            document.getElementById('confirmation-modal').classList.remove('hidden');
+            document.getElementById('confirmation-modal').classList.add('flex');
+
+            return new Promise(resolve => {
+                confirmationResolver = resolve;
+            });
+        }
+
+        /** Handles confirmation modal button clicks */
+        function commitConfirmation(result) {
+            document.getElementById('confirmation-modal').classList.add('hidden');
+            document.getElementById('confirmation-modal').classList.remove('flex');
+            if (confirmationResolver) {
+                confirmationResolver(result);
+                confirmationResolver = null;
+            }
+        }
+
         /** Generates a unique ID */
         function generateId() {
             if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -177,44 +237,150 @@
             return Date.now().toString(36) + Math.random().toString(36).substring(2);
         }
 
-        // --- Container Data Handling ---
-
-        function loadContainers() {
-            try {
-                const savedContainers = localStorage.getItem(CONTAINERS_KEY);
-                containers = savedContainers ? JSON.parse(savedContainers) : [];
-                renderContainersList();
-
-                // If a container was active, try to re-select it (it will be locked/unlocked as necessary)
-                if (activeContainerId) {
-                    selectContainer(activeContainerId);
-                }
-            } catch (e) {
-                console.error("Konumlar yüklenirken hata oluştu:", e);
-            }
-        }
-
-        function saveContainers() {
-            try {
-                localStorage.setItem(CONTAINERS_KEY, JSON.stringify(containers));
-            } catch (e) {
-                console.error("Konumlar kaydedilirken hata oluştu:", e);
-                showMessageBox("Hata", "Konum verileriniz kaydedilemedi.");
-            }
-        }
-
         function getContainerById(id) {
             return containers.find(c => c.id === id);
         }
+
+        // --- Firebase/Firestore Logic ---
+
+        /** Firestore Helpers - Private Data Path */
+        function getUserContainersCollection() {
+            // Path: /artifacts/{appId}/users/{userId}/muDocContainers
+            if (!db || !userId) return null;
+            return collection(db, 'artifacts', appId, 'users', userId, 'muDocContainers');
+        }
+
+        /** Real-time Listener for Containers */
+        function setupContainerListener() {
+            const containersCol = getUserContainersCollection();
+            if (!containersCol) {
+                showMessageBox("Hata", "Veri dinleyicisi başlatılamadı: Kimlik doğrulama hazır değil.");
+                return;
+            }
+
+            // Listen for real-time changes
+            onSnapshot(containersCol, (snapshot) => {
+                const newContainers = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    newContainers.push({
+                        id: doc.id,
+                        ...data,
+                        // 'unlocked' state is transient and defaults to locked if password exists
+                        content: data.content || [],
+                        unlocked: data.password ? false : true 
+                    });
+                });
+
+                // Sort containers by name before setting state
+                newContainers.sort((a, b) => a.name.localeCompare(b.name, 'tr', { sensitivity: 'base' }));
+
+                containers = newContainers;
+                renderContainersList();
+
+                // If an active container exists, try to select/re-render it
+                if (activeContainerId) {
+                    selectContainer(activeContainerId, false); // Do not force password prompt on data update
+                } else if (containers.length > 0) {
+                     // Optionally auto-select the first one if nothing is active
+                     // selectContainer(containers[0].id); 
+                }
+
+                // Hide loading screen after first successful data load
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('main-app-content').classList.remove('hidden');
+
+            }, (error) => {
+                console.error("Firestore Dinleme Hatası:", error);
+                showMessageBox("Hata", "Veritabanı bağlantısı kesildi veya okuma yetkisi yok.");
+            });
+        }
+
+        /** Saves changes to a single container document in Firestore */
+        async function updateContainer(container) {
+            if (!isAuthReady || !db || !container.id) {
+                showMessageBox("Hata", "Kimlik doğrulama veya veritabanı hazır değil.");
+                return;
+            }
+
+            // Create a database-safe copy (don't store the local 'unlocked' state)
+            const { unlocked, id, ...dataToSave } = container;
+
+            try {
+                const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
+                await setDoc(containerRef, dataToSave, { merge: true });
+                // UI update is handled by the real-time listener (onSnapshot)
+            } catch (e) {
+                console.error("Konteyner güncellenirken hata:", e);
+                showMessageBox("Hata", "Konum güncellenemedi. Lütfen internet bağlantınızı kontrol edin.");
+            }
+        }
+
+
+        // --- Auth & Initialization ---
+
+        async function initFirebase() {
+            try {
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+
+                if (Object.keys(firebaseConfig).length === 0) {
+                    console.error("Firebase config is missing.");
+                    showMessageBox("Hata", "Uygulama başlatılamadı: Firebase yapılandırması eksik.");
+                    return;
+                }
+
+                // 1. Initialize App
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                // setLogLevel('Debug'); // Enable for debugging
+
+                // 2. Handle Authentication
+                // This promise resolves after the auth state is settled
+                await new Promise((resolve, reject) => {
+                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                        unsubscribe(); 
+                        if (user) {
+                            userId = user.uid;
+                        } else {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                try {
+                                    const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+                                    userId = userCredential.user.uid;
+                                } catch (e) {
+                                    await signInAnonymously(auth);
+                                    userId = auth.currentUser.uid;
+                                }
+                            } else {
+                                await signInAnonymously(auth);
+                                userId = auth.currentUser.uid;
+                            }
+                        }
+                        isAuthReady = true;
+                        document.getElementById('user-id-display').textContent = userId;
+                        resolve();
+                    }, reject);
+                });
+
+                // 3. Start real-time data listener 
+                setupContainerListener();
+
+            } catch (e) {
+                console.error("Firebase Initialization or Auth Failed:", e);
+                showMessageBox("Kritik Hata", "Giriş yapılırken veya veritabanı başlatılırken kritik bir hata oluştu.");
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('main-app-content').classList.remove('hidden'); // Show content even if broken
+            }
+        }
+
 
         // --- Container UI and Actions ---
 
         function renderContainersList() {
             const listContainer = document.getElementById('containers-list');
-            listContainer.innerHTML = ''; // Önce tüm içeriği temizle
+            listContainer.innerHTML = ''; 
 
             if (containers.length === 0) {
-                // Konteyner yoksa, "boş mesajı" HTML olarak yeniden ekle
                 listContainer.innerHTML = `
                     <p class="text-center py-4 text-gray-500 text-sm" id="no-containers-message">
                         Henüz hiç konum oluşturulmadı.
@@ -225,25 +391,30 @@
 
             containers.forEach(container => {
                 const isActive = container.id === activeContainerId;
+                // Check local state for unlocked status
                 const isLocked = container.password && !container.unlocked;
 
                 const itemDiv = document.createElement('div');
-                itemDiv.id = container-${container.id};
-                itemDiv.className = container-item p-3 rounded-lg cursor-pointer flex justify-between items-center ${isActive ? 'active' : 'bg-gray-900 hover:bg-gray-700/50'};
-                itemDiv.onclick = () => selectContainer(container.id);
+                itemDiv.id = `container-${container.id}`;
+                itemDiv.className = `container-item p-3 rounded-lg cursor-pointer flex justify-between items-center ${isActive ? 'active' : 'bg-gray-900 hover:bg-gray-700/50'}`;
+                itemDiv.onclick = () => selectContainer(container.id, true);
+                
+                // Content count is retrieved from Firestore data
+                const itemCount = container.content ? container.content.length : 0;
+                
                 itemDiv.innerHTML = `
                     <span class="flex items-center truncate">
                         ${isLocked ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-orange-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>'}
                         <span class="truncate">${container.name}</span>
                     </span>
-                    <span class="text-xs text-gray-400 ml-2">${container.content.length} öğe</span>
+                    <span class="text-xs text-gray-400 ml-2">${itemCount} öğe</span>
                 `;
 
                 listContainer.appendChild(itemDiv);
             });
         }
 
-        function createContainer() {
+        async function createContainer() {
             const nameInput = document.getElementById('new-container-name');
             const passwordInput = document.getElementById('new-container-password');
             const name = nameInput.value.trim();
@@ -254,54 +425,84 @@
                 return;
             }
 
-            const newContainer = {
-                id: generateId(),
+            const newContainerData = {
                 name: name,
-                password: password, // Simple string password
-                unlocked: !password, // Automatically unlocked if no password set
+                password: password,
                 content: []
             };
 
-            containers.push(newContainer);
-            saveContainers();
-            nameInput.value = '';
-            passwordInput.value = '';
-            renderContainersList();
-            selectContainer(newContainer.id); // Select and show the new container
+            try {
+                const containersCol = getUserContainersCollection();
+                if (!containersCol) throw new Error("Koleksiyon referansı alınamadı.");
+
+                const docRef = await addDoc(containersCol, newContainerData);
+                showMessageBox("Başarılı", "Yeni konum oluşturuldu.");
+                nameInput.value = '';
+                passwordInput.value = '';
+                
+                // onSnapshot listener will update the list and select it automatically
+                activeContainerId = docRef.id;
+
+            } catch (e) {
+                console.error("Konum oluşturulurken hata:", e);
+                showMessageBox("Hata", "Yeni konum oluşturulamadı.");
+            }
         }
 
-        function selectContainer(id) {
+        function selectContainer(id, shouldCheckLock = true) {
             activeContainerId = id;
             const container = getContainerById(id);
             if (!container) return;
 
-            // Update UI list to reflect active item
             renderContainersList();
 
-            if (container.password && !container.unlocked) {
+            if (container.password && !container.unlocked && shouldCheckLock) {
                 showPasswordModal(container.name);
             } else {
-                renderContainerContent(container);
+                // If container is locked but we are re-rendering due to data change (shouldCheckLock=false), 
+                // we should clear the content.
+                if (container.password && !container.unlocked) {
+                    document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
+                } else {
+                    renderContainerContent(container);
+                }
             }
         }
 
+        async function deleteContainer(id) {
+            const confirmed = await showConfirmationBox("Konumu Sil", "Bu konumu ve içindeki TÜM içeriği kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.");
+
+            if (confirmed) {
+                try {
+                    const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
+                    await deleteDoc(containerRef);
+                    activeContainerId = null; // Deselect on delete
+                    document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
+                    showMessageBox("Başarılı", "Konum başarıyla silindi.");
+                } catch (e) {
+                    console.error("Konum silinirken hata:", e);
+                    showMessageBox("Hata", "Konum silinemedi. Silme işlemi sırasında bir veritabanı hatası oluştu.");
+                }
+            }
+        }
+        
         // --- Password Logic ---
 
         function showPasswordModal(containerName) {
-            document.getElementById('password-modal-name').textContent = Konumu açmak için şifreyi girin: ${containerName};
+            document.getElementById('password-modal-name').textContent = `Konumu açmak için şifreyi girin: ${containerName}`;
             document.getElementById('password-modal-input').value = '';
             document.getElementById('password-modal').classList.remove('hidden');
             document.getElementById('password-modal').classList.add('flex');
-            document.getElementById('welcome-message').style.display = 'none'; // Hide welcome message
-            document.getElementById('content-area').innerHTML = ''; // Clear main content
+            document.getElementById('welcome-message').style.display = 'none'; 
+            document.getElementById('content-area').innerHTML = ''; 
         }
 
         function closePasswordModal() {
             document.getElementById('password-modal').classList.add('hidden');
             document.getElementById('password-modal').classList.remove('flex');
-            activeContainerId = null; // Deselect on cancel
+            activeContainerId = null; 
             renderContainersList();
-            document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML; // Show welcome message again
+            document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML; 
         }
 
         function unlockContainerAttempt() {
@@ -315,10 +516,10 @@
 
             if (container.password === passwordInput) {
                 container.unlocked = true;
-                saveContainers();
+                // No need to save 'unlocked' to Firestore, it's transient local state
                 closePasswordModal();
                 renderContainerContent(container);
-                renderContainersList(); // Update lock icon
+                renderContainersList(); 
             } else {
                 showMessageBox("Hata", "Yanlış şifre! Lütfen tekrar deneyin.");
                 document.getElementById('password-modal-input').value = '';
@@ -343,7 +544,7 @@
             containerToRenameId = null;
         }
 
-        function commitRename() {
+        async function commitRename() {
             const newName = document.getElementById('rename-modal-input').value.trim();
             const container = getContainerById(containerToRenameId);
 
@@ -354,10 +555,9 @@
 
             if (container) {
                 container.name = newName;
-                saveContainers();
-                renderContainersList();
-                renderContainerContent(container); // Re-render content header
+                await updateContainer(container); // Save to Firestore
                 closeRenameModal();
+                // UI will be refreshed by onSnapshot
             }
         }
 
@@ -366,11 +566,10 @@
         function renderContainerContent(container) {
             const contentArea = document.getElementById('content-area');
 
-            // Header and Action Buttons
             const headerHtml = `
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-6 border-orange-500/50">
                     <h2 class="text-4xl font-extrabold text-orange-400 neon-glow mb-2 sm:mb-0 truncate">${container.name}</h2>
-                    <div class="flex space-x-3">
+                    <div class="flex space-x-3 mt-2 sm:mt-0">
                         <button onclick="openRenameModal('${container.id}')"
                                 class="bg-gray-700 hover:bg-gray-600 text-gray-200 py-1 px-3 rounded-md text-sm btn-glow">
                             Ad Değiştir
@@ -401,7 +600,7 @@
                     <!-- Add File/Image -->
                     <div class="p-4 bg-gray-900 rounded-lg border border-orange-500/30">
                         <h3 class="text-xl font-bold text-gray-200 mb-3">Dosya/Fotoğraf Yükle (Max 5MB)</h3>
-                        <p class="text-xs text-red-400 mb-3">UYARI: Büyük dosyalar tarayıcınızı yavaşlatabilir veya çökebilir (localStorage limiti!).</p>
+                        <p class="text-xs text-red-400 mb-3">UYARI: Veriler Base64 olarak DB'ye kaydedilir. Büyük dosyalar performansı düşürür.</p>
                         <input type="file" id="file-input-${container.id}" 
                                class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
                         <input type="text" id="file-title-${container.id}" placeholder="Dosya Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg my-2 text-sm">
@@ -425,23 +624,12 @@
             const container = getContainerById(id);
             if (container && container.password) {
                 container.unlocked = false;
-                saveContainers();
+                // No DB write needed, only local state change
                 activeContainerId = null; // Deselect
                 renderContainersList();
                 document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
             } else if (container && !container.password) {
-                showMessageBox("Uyarı", "Bu konumda şifre ayarlanmamış. Kilitlemek için önce şifre ayarlayın.");
-            }
-        }
-
-        function deleteContainer(id) {
-            if (confirm("Bu konumu ve içindeki TÜM içeriği kalıcı olarak silmek istediğinizden emin misiniz?")) {
-                containers = containers.filter(c => c.id !== id);
-                saveContainers();
-                activeContainerId = null;
-                renderContainersList();
-                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
-                showMessageBox("Başarılı", "Konum başarıyla silindi.");
+                showMessageBox("Uyarı", "Bu konumda şifre ayarlanmamış. Kilitleme işlemi sadece şifre varsa çalışır.");
             }
         }
 
@@ -450,7 +638,7 @@
             list.innerHTML = '';
 
             if (container.content.length === 0) {
-                list.innerHTML = <p class="text-center py-10 text-gray-500">Bu konumda henüz hiç dosya veya not yok.</p>;
+                list.innerHTML = `<p class="text-center py-10 text-gray-500">Bu konumda henüz hiç dosya veya not yok.</p>`;
                 return;
             }
 
@@ -462,23 +650,23 @@
                 
                 // Determine icon and content based on type
                 if (item.type === 'note') {
-                    icon = <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-400 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-4.243 4.243a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414L8 10l-.257-1.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg>;
-                    contentHtml = <p class="text-sm text-gray-400 mt-1 whitespace-pre-wrap">${item.data.substring(0, 150)}${item.data.length > 150 ? '...' : ''}</p>;
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-4.243 4.243a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414L8 10l-.257-1.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg>`;
+                    contentHtml = `<p class="text-sm text-gray-400 mt-1 whitespace-pre-wrap">${item.data.substring(0, 150)}${item.data.length > 150 ? '...' : ''}</p>`;
                     bgColor = 'bg-gray-900/70';
                 } else if (item.type === 'image') {
-                    icon = <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>;
-                    contentHtml = <img src="${item.data}" alt="${item.title}" class="max-h-24 w-auto rounded-md mt-2 border border-gray-600"/>;
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>`;
+                    contentHtml = `<img src="${item.data}" alt="${item.title}" class="max-h-24 w-auto rounded-md mt-2 border border-gray-600"/>`;
                     bgColor = 'bg-gray-900/50';
                 } else if (item.type === 'file') {
-                    icon = <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7z" /><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>;
-                    contentHtml = <a href="${item.data}" download="${item.title}" class="text-blue-400 hover:text-blue-300 text-sm underline mt-1 block">Dosyayı İndir (${item.mimeType.split('/')[1] || 'Bilinmiyor'})</a>;
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7z" /><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>`;
+                    contentHtml = `<a href="${item.data}" download="${item.title}" class="text-blue-400 hover:text-blue-300 text-sm underline mt-1 block">Dosyayı İndir (${item.mimeType ? item.mimeType.split('/')[1] : 'Bilinmiyor'})</a>`;
                     bgColor = 'bg-gray-900/70';
                 }
 
-                itemDiv.className = p-4 ${bgColor} rounded-lg border border-gray-700 flex justify-between items-start transition duration-150 hover:border-orange-500/50;
+                itemDiv.className = `p-4 ${bgColor} rounded-lg border border-gray-700 flex justify-between items-start transition duration-150 hover:border-orange-500/50`;
                 itemDiv.innerHTML = `
                     <div class="flex-grow min-w-0">
-                        <div class="flex items-center">
+                        <div class="flex items-start">
                             ${icon}
                             <div class="min-w-0">
                                 <p class="font-semibold text-lg text-gray-100 truncate">${item.title}</p>
@@ -496,14 +684,17 @@
             });
         }
 
-        // --- Add/Delete Content ---
-
-        function addNoteToContainer(containerId) {
+        async function addNoteToContainer(containerId) {
             const container = getContainerById(containerId);
             const titleInput = document.getElementById('note-title');
             const contentInput = document.getElementById('note-content');
             const title = titleInput.value.trim();
             const content = contentInput.value.trim();
+
+            if (!container || !isAuthReady) {
+                 showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
+                return;
+            }
 
             if (!title || !content) {
                 showMessageBox("Uyarı", "Not başlığı ve içeriği boş olamaz.");
@@ -518,10 +709,10 @@
                 date: new Date().toLocaleString('tr-TR')
             };
 
-            container.content.unshift(newItem); // Add to the beginning
-            saveContainers();
-            renderContainerContent(container);
-            renderContainersList(); // Update item count
+            container.content.unshift(newItem); 
+            await updateContainer(container); // Save to Firestore
+
+            // Clear inputs (no need for manual re-render, onSnapshot handles it)
             titleInput.value = '';
             contentInput.value = '';
             showMessageBox("Başarılı", "Notunuz konuma eklendi.");
@@ -529,10 +720,15 @@
 
         function handleFileUpload(containerId) {
             const container = getContainerById(containerId);
-            const fileInput = document.getElementById(file-input-${containerId});
-            const titleInput = document.getElementById(file-title-${containerId});
+            const fileInput = document.getElementById(`file-input-${containerId}`);
+            const titleInput = document.getElementById(`file-title-${containerId}`);
             const file = fileInput.files[0];
             const title = titleInput.value.trim() || file?.name || 'Yüklenen Dosya';
+
+            if (!container || !isAuthReady) {
+                 showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
+                return;
+            }
 
             if (!file) {
                 showMessageBox("Uyarı", "Lütfen bir dosya seçin.");
@@ -542,13 +738,13 @@
             // Simple size check (e.g., max 5MB)
             const MAX_SIZE_MB = 5;
             if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-                 showMessageBox("Hata", Dosya boyutu ${MAX_SIZE_MB}MB'ı geçemez. Lütfen daha küçük bir dosya kullanın.);
+                 showMessageBox("Hata", `Dosya boyutu ${MAX_SIZE_MB}MB'ı geçemez. Lütfen daha küçük bir dosya kullanın.`);
                 return;
             }
 
             const reader = new FileReader();
 
-            reader.onload = function(event) {
+            reader.onload = async function(event) {
                 const base64Data = event.target.result;
                 const fileType = file.type.startsWith('image/') ? 'image' : 'file';
 
@@ -562,14 +758,12 @@
                 };
 
                 container.content.unshift(newItem);
-                saveContainers();
-                renderContainerContent(container);
-                renderContainersList(); // Update item count
+                await updateContainer(container); // Save to Firestore
 
                 // Clear inputs
                 fileInput.value = '';
                 titleInput.value = '';
-                showMessageBox("Başarılı", ${fileType === 'image' ? 'Fotoğrafınız' : 'Dosyanız'} konuma eklendi.);
+                showMessageBox("Başarılı", `${fileType === 'image' ? 'Fotoğrafınız' : 'Dosyanız'} konuma eklendi.`);
             };
 
             reader.onerror = function(error) {
@@ -580,22 +774,22 @@
             reader.readAsDataURL(file);
         }
 
-        function deleteContentItem(containerId, itemId) {
-            if (confirm("Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?")) {
+        async function deleteContentItem(containerId, itemId) {
+            const confirmed = await showConfirmationBox("Öğeyi Sil", "Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?");
+
+            if (confirmed) {
                 const container = getContainerById(containerId);
                 if (container) {
                     container.content = container.content.filter(item => item.id !== itemId);
-                    saveContainers();
-                    renderContainerContent(container);
-                    renderContainersList(); // Update item count
+                    await updateContainer(container); // Save to Firestore
+                    // UI will be updated by onSnapshot.
                     showMessageBox("Başarılı", "Öğe başarıyla silindi.");
                 }
             }
         }
 
         // --- Initialization ---
-        window.onload = loadContainers;
-
+        window.onload = initFirebase;
     </script>
 </body>
 </html>
