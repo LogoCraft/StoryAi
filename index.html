@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuDoc V8 - Oturum Güvencesi</title>
+    <title>MuDoc V9 - Zorunlu UI Yükleme</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -76,7 +76,7 @@
                 </button>
             </div>
             <div class="flex-2 text-center">
-                <h1 class="text-5xl sm:text-6xl font-extrabold text-blue-400 neon-glow">MuDoc V8</h1>
+                <h1 class="text-5xl sm:text-6xl font-extrabold text-blue-400 neon-glow">MuDoc V9</h1>
                 <p class="mt-1 text-lg text-gray-400">
                     Oturum ID: <span id="user-id-display" class="font-mono text-xs bg-gray-700 rounded-md px-2 py-0.5 ml-1">Yükleniyor...</span>
                 </p>
@@ -281,7 +281,7 @@
         
         async function updateContainer(container) {
             if (!isAuthReady || !db || !container.id || !isFirebaseAvailable || !userId) {
-                console.error("Hata: Firestore için hazır değil veya userId eksik.");
+                console.error("Error: Not ready for Firestore or missing userId.");
                 showMessageBox("Hata", "Veri, kimlik doğrulama tamamlanmadığı için kaydedilemedi.");
                 return;
             }
@@ -294,7 +294,7 @@
                 const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
                 await setDoc(containerRef, dataToSave, { merge: true });
             } catch (e) {
-                console.error("Konteyner güncellenirken Firestore hatası:", e);
+                console.error("Firestore error while updating container:", e);
                 showMessageBox("Hata", "Konum buluta güncellenemedi.");
             }
         }
@@ -310,8 +310,11 @@
 
         function setupContainerListener() {
             if (!isFirebaseAvailable || !userId) {
-                 // Firebase available değilse dinleyici kurmaya çalışma
-                 if (unsubscribeContainers) unsubscribeContainers();
+                 // Do not attempt to set up listener if Firebase is unavailable or userId is missing
+                 if (unsubscribeContainers) {
+                    unsubscribeContainers();
+                    unsubscribeContainers = null;
+                 }
                  containers = [];
                  renderContainersList();
                  return;
@@ -356,7 +359,7 @@
                 }
 
             }, (error) => {
-                console.error("Firestore Dinleme Hatası:", error);
+                console.error("Firestore Listening Error:", error);
                 if (error.code !== 'permission-denied') {
                     showMessageBox("Hata", "Veritabanı bağlantısı kesildi veya bir hata oluştu.");
                 }
@@ -374,8 +377,9 @@
 
             if (!isFirebaseAvailable) {
                 authStatusText.textContent = 'VERİTABANI KAPALI';
+                authStatusText.classList.remove('text-green-400');
                 authStatusText.classList.add('text-red-400');
-                userIdDisplay.textContent = 'YOK';
+                userIdDisplay.textContent = 'YOK (HATA)';
                 authButton.disabled = true;
                 return;
             }
@@ -388,12 +392,14 @@
 
             if (isAnonymous) {
                 authStatusText.textContent = 'Anonim Oturum';
-                authStatusText.classList.remove('text-green-400');
+                authStatusText.classList.remove('text-green-400', 'text-red-400');
             } else if (userId && auth.currentUser && auth.currentUser.email) {
                 authStatusText.textContent = `Giriş Yapıldı (${auth.currentUser.email})`;
                 authStatusText.classList.add('text-green-400');
+                authStatusText.classList.remove('text-red-400');
             } else {
                  authStatusText.textContent = 'Hesap';
+                 authStatusText.classList.remove('text-green-400', 'text-red-400');
             }
         }
 
@@ -403,7 +409,7 @@
             document.getElementById('main-app-content').classList.remove('hidden');
             updateAuthUI();
             if (!isFirebaseAvailable) {
-                 showMessageBox("Kritik Hata", "Sistemden Firebase yapılandırması alınamadı. Uygulama çalıştırılamaz. (Veritabanı işlemleri devre dışı)");
+                 showMessageBox("Kritik Hata", "Firebase yapılandırması alınamadı. Uygulama çalıştırıldı ancak veri işlemleri devre dışı.");
             }
         }
 
@@ -430,57 +436,79 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                loadingStatus.textContent = "Anonim oturum açılıyor...";
+                loadingStatus.textContent = "Oturum açılıyor...";
 
                 // 2. Force initial sign-in/token exchange right away if no current user
                 if (!auth.currentUser) {
-                    if (initialAuthToken) {
-                        // Attempt token sign-in, fallback to anonymous
-                        await signInWithCustomToken(auth, initialAuthToken).catch(e => {
-                            console.warn("Custom token failed, falling back to anonymous.", e);
-                            return signInAnonymously(auth);
-                        });
-                    } else {
-                        // If no token, sign in anonymously
-                        await signInAnonymously(auth);
+                    try {
+                        if (initialAuthToken) {
+                            // Attempt token sign-in, fallback to anonymous
+                            await signInWithCustomToken(auth, initialAuthToken).catch(e => {
+                                console.warn("Custom token failed, falling back to anonymous.", e);
+                                return signInAnonymously(auth);
+                            });
+                        } else {
+                            // If no token, sign in anonymously
+                            await signInAnonymously(auth);
+                        }
+                    } catch (e) {
+                         // A secondary failure point in the auth flow (e.g., auth service unavailable)
+                        console.error("Kritik Oturum Açma Hatası:", e);
+                        isFirebaseAvailable = false;
                     }
                 }
-
+                
                 // 3. Set up Auth State Listener
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAnonymous = user.isAnonymous;
-                        setupContainerListener();
-                        loadingStatus.textContent = `Oturum ${userId} ile açıldı. Veriler bekleniyor...`;
-                    } else {
-                        userId = null; 
-                        isAnonymous = false;
-                        setupContainerListener(); 
-                        loadingStatus.textContent = "Oturum Kapatıldı.";
-                    }
-                    
-                    // Finalize UI load only on the first run of the listener
-                    if (!isAuthReady) {
-                        isAuthReady = true;
-                        finalizeUILoad();
-                    }
-                    updateAuthUI();
-                });
+                if (auth) {
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            isAnonymous = user.isAnonymous;
+                            setupContainerListener();
+                            loadingStatus.textContent = `Oturum ${userId} ile açıldı. Veriler bekleniyor...`;
+                        } else {
+                            userId = null; 
+                            isAnonymous = false;
+                            setupContainerListener(); 
+                            loadingStatus.textContent = "Oturum Kapatıldı.";
+                            
+                            // Immediately force anonymous sign in if user logs out or is null initially
+                            if (auth && !auth.currentUser) {
+                                signInAnonymously(auth).catch(err => console.error("Anonim oturum açma hatası:", err));
+                            }
+                        }
+                        
+                        // Finalize UI load only on the first run of the listener
+                        if (!isAuthReady) {
+                            isAuthReady = true;
+                            finalizeUILoad();
+                        }
+                        updateAuthUI();
+                    });
+                }
 
 
             } catch (e) {
-                // --- CRITICAL FAILURE HANDLING ---
+                // --- CRITICAL FAILURE HANDLING (Config/Init Failure) ---
                 console.error("Kritik: Firebase Initialization or Config Failed:", e);
                 isFirebaseAvailable = false;
-                isAuthReady = true; 
                 userId = 'YOK (HATA)'; // Ensure the ID display shows the failure state
-                loadingStatus.textContent = "HATA: Yapılandırma başarısız. Uygulama çalıştırılamaz.";
-                finalizeUILoad(); 
+                loadingStatus.textContent = "HATA: Yapılandırma başarısız. Veri işlemleri devre dışı.";
+            }
+            
+            // --- CRITICAL FIX: Ensure UI loads even if onAuthStateChanged fails to fire ---
+            // If isAuthReady is still false after the async auth attempts, force the UI to load.
+            if (!isAuthReady) {
+                isAuthReady = true;
+                if (isFirebaseAvailable && !userId) {
+                    // Firebase is active but waiting for auth signal (a rare state)
+                    userId = 'AUTH BEKLENİYOR'; 
+                }
+                setTimeout(() => finalizeUILoad(), 500); // Give the auth listener a small chance to fire first
             }
         }
 
-        // --- Authentication Modal Logic (Same as V7) ---
+        // --- Authentication Modal Logic (Same as V8) ---
         
         window.openAuthModal = function() {
             if (!isFirebaseAvailable) {
@@ -607,11 +635,7 @@
 
 
         // --- Container UI and Actions (All check isFirebaseAvailable) ---
-        // The remaining functions (renderContainersList, createContainer, selectContainer, 
-        // deleteContainer, unlockContainerAttempt, renderContainerContent, addNoteToContainer, 
-        // handleFileUpload, deleteContentItem etc.) are the same as V7 and are omitted 
-        // here for brevity, as they correctly implement the Firebase/Auth checks.
-
+        
         function renderContainersList() {
             const listContainer = document.getElementById('containers-list');
             listContainer.innerHTML = ''; 
@@ -1022,3 +1046,9 @@
             }
         }
 
+
+        // --- Initialization ---
+        window.onload = initFirebase;
+    </script>
+</body>
+</html>
