@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuDoc - Kalıcı Hesaplar ve Kimlik Doğrulama</title>
+    <title>MuDoc - Hata Korumalı Başlatma</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -70,7 +70,7 @@
                 </button>
             </div>
             <div class="flex-2 text-center">
-                <h1 class="text-5xl sm:text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V3</h1>
+                <h1 class="text-5xl sm:text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V4</h1>
                 <p class="mt-1 text-lg text-gray-400">
                     Kullanıcı ID: <span id="user-id-display" class="font-mono text-xs bg-gray-700 rounded-md px-2 py-0.5 ml-1">Yükleniyor...</span>
                 </p>
@@ -316,9 +316,6 @@
                     selectContainer(activeContainerId, false);
                 }
 
-                // NOTE: Removed loading screen hide logic from here to prevent getting stuck if onSnapshot fails.
-                // It now hides in onAuthStateChanged.
-
             }, (error) => {
                 console.error("Firestore Dinleme Hatası:", error);
                 // If permission denied, ensure UI reflects the issue.
@@ -376,20 +373,36 @@
         }
 
         async function initFirebase() {
+            // EK KORUMA: 5 saniye içinde auth değişimi olmazsa yükleme ekranını kapat.
+            const loadingTimeout = setTimeout(() => {
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('main-app-content').classList.remove('hidden');
+                if (!isAuthReady) {
+                    // Yalnızca auth hazır değilse uyarı göster
+                    showMessageBox("Kritik Hata (Zaman Aşımı)", "Uygulama 5 saniye içinde başlatılamadı. Bu, eksik veya hatalı Firebase yapılandırmasından ya da ağ sorunlarından kaynaklanabilir. Konsolu kontrol edin.");
+                }
+            }, 5000); // 5 saniye bekleme
+
             try {
+                // Detaylı konsol çıktısı için debug seviyesini ayarla
+                setLogLevel('debug'); 
+                
                 const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 
                 if (Object.keys(firebaseConfig).length === 0) {
-                    console.error("Firebase config is missing.");
-                    showMessageBox("Hata", "Uygulama başlatılamadı: Firebase yapılandırması eksik.");
-                    return;
+                    console.error("Firebase yapılandırması eksik. Uygulama başlatılamadı.");
+                    // Konfigürasyon yoksa zaman aşımını iptal et ve özel hata mesajını göster.
+                    clearTimeout(loadingTimeout);
+                    document.getElementById('loading-overlay').classList.add('hidden');
+                    document.getElementById('main-app-content').classList.remove('hidden');
+                    showMessageBox("Kritik Hata", "Uygulama başlatılamadı: Firebase yapılandırması (API anahtarları vb.) eksik. Uygulamanın çalışması için bu gereklidir.");
+                    return; 
                 }
 
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                setLogLevel('error'); // Use 'error' to suppress warnings
-
+                
                 let initialAuthAttempted = false;
 
                 // --- Auth State Listener ---
@@ -412,7 +425,6 @@
                         setupContainerListener(); // This will clear the UI
 
                         // Only attempt initial sign-in if the listener reports no user
-                        // and we haven't tried yet in the async block below.
                         if (!initialAuthAttempted) {
                             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                                 try {
@@ -429,8 +441,8 @@
                     }
                     
                     // GÜNCELLEME: Yükleme ekranını kimlik doğrulama durumu belirlenir belirlenmez gizle.
-                    // Bu, veritabanı yüklenirken takılma sorununu önler.
                     if (isAuthReady) {
+                        clearTimeout(loadingTimeout); // Başarılı olunca zaman aşımını iptal et
                         document.getElementById('loading-overlay').classList.add('hidden');
                         document.getElementById('main-app-content').classList.remove('hidden');
                     }
@@ -438,8 +450,7 @@
                 
                 // --- Initial Auth Check (to kick off the listener if needed) ---
                 if (!auth.currentUser) {
-                    // This block ensures an initial user is present to trigger the onAuthStateChanged listener
-                    initialAuthAttempted = true; // Set flag to prevent double execution in listener's else block
+                    initialAuthAttempted = true; 
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         try {
                             await signInWithCustomToken(auth, __initial_auth_token);
@@ -452,10 +463,11 @@
                 }
 
             } catch (e) {
-                console.error("Firebase Initialization or Auth Failed:", e);
-                showMessageBox("Kritik Hata", "Giriş yapılırken veya veritabanı başlatılırken kritik bir hata oluştu.");
+                console.error("Firebase Initialization or Auth Failed (Kritik):", e);
+                clearTimeout(loadingTimeout); // Hata yakalanırsa zaman aşımını iptal et
                 document.getElementById('loading-overlay').classList.add('hidden');
                 document.getElementById('main-app-content').classList.remove('hidden');
+                showMessageBox("Kritik Hata", "Firebase başlatılırken beklenmedik bir hata oluştu. Lütfen konsolu kontrol edin.");
             }
         }
 
@@ -583,7 +595,6 @@
         // --- Container UI and Actions (Mostly the same, just ensuring calls use isAuthReady) ---
 
         function renderContainersList() {
-            // ... (Same as before)
             const listContainer = document.getElementById('containers-list');
             listContainer.innerHTML = ''; 
 
@@ -609,7 +620,7 @@
                 
                 itemDiv.innerHTML = `
                     <span class="flex items-center truncate">
-                        ${isLocked ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-orange-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>'}
+                        ${isLocked ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 1010 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-orange-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>'}
                         <span class="truncate">${container.name}</span>
                     </span>
                     <span class="text-xs text-gray-400 ml-2">${itemCount} öğe</span>
@@ -619,16 +630,12 @@
             });
         }
         
-        // --- All other CRUD functions (createContainer, selectContainer, deleteContainer, updateContainer, etc.) 
-        // are functionally the same as the previous version, as they correctly rely on the global 'userId' variable 
-        // which is now dynamically updated by the onAuthStateChanged listener. ---
-
         window.createContainer = async function() {
             if (!isAuthReady || !userId) {
                 showMessageBox("Uyarı", "Lütfen önce giriş yapın veya oturumun yüklenmesini bekleyin.");
                 return;
             }
-            // ... (rest of the logic is same)
+            
             const nameInput = document.getElementById('new-container-name');
             const passwordInput = document.getElementById('new-container-password');
             const name = nameInput.value.trim();
@@ -663,7 +670,6 @@
         }
         
         function selectContainer(id, shouldCheckLock = true) {
-            // ... (same as before)
             activeContainerId = id;
             const container = getContainerById(id);
             if (!container) return;
@@ -892,7 +898,7 @@
                  showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
                 return;
             }
-            // ... (rest of the logic is same)
+            
             const titleInput = document.getElementById('note-title');
             const contentInput = document.getElementById('note-content');
             const title = titleInput.value.trim();
@@ -925,7 +931,7 @@
                  showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
                 return;
             }
-            // ... (rest of the logic is same)
+            
             const fileInput = document.getElementById(`file-input-${containerId}`);
             const titleInput = document.getElementById(`file-title-${containerId}`);
             const file = fileInput.files[0];
