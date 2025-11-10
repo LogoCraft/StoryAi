@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuDoc - Hata Korumalı Başlatma</title>
+    <title>MuDoc V6 - Güvenli Veri Konumları</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -11,17 +11,17 @@
     <style>
         /* CSS for the glow/illumination effect */
         .neon-glow {
-            text-shadow: 0 0 5px #f97316, 0 0 10px #f97316, 0 0 20px #ea580c;
+            text-shadow: 0 0 5px #38bdf8, 0 0 10px #38bdf8, 0 0 20px #0ea5e9;
         }
         .card-glow {
-            box-shadow: 0 0 10px rgba(249, 115, 22, 0.4), 0 0 20px rgba(249, 115, 22, 0.2);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.2);
         }
         .btn-glow {
             transition: all 0.2s ease-in-out;
-            box-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
         }
         .btn-glow:hover {
-            box-shadow: 0 0 15px rgba(249, 115, 22, 0.9), 0 0 30px rgba(249, 115, 22, 0.5);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.9), 0 0 30px rgba(59, 130, 246, 0.5);
             transform: translateY(-1px);
         }
         body {
@@ -36,16 +36,22 @@
             background: #1f2937;
         }
         ::-webkit-scrollbar-thumb {
-            background: #f97316;
+            background: #3b82f6;
             border-radius: 4px;
         }
         .container-item.active {
-            background-color: #f97316;
+            background-color: #3b82f6;
             color: #1f2937;
             font-weight: 600;
         }
         .container-item.active .text-gray-400 {
             color: #1f2937 !important;
+        }
+        /* Override Tailwind for clean text areas */
+        textarea:focus, input:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+            border-color: #3b82f6;
         }
     </style>
 </head>
@@ -53,8 +59,8 @@
 
     <!-- Loading Screen (Displayed until Firebase Auth is ready and data is loaded) -->
     <div id="loading-overlay" class="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-[100]">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-orange-500"></div>
-        <p class="mt-4 text-orange-400 text-lg font-semibold">Güvenli Giriş Yapılıyor...</p>
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+        <p class="mt-4 text-blue-400 text-lg font-semibold">Güvenli Oturum Başlatılıyor...</p>
         <p class="mt-2 text-gray-500 text-sm">Verileriniz sunucudan yükleniyor.</p>
     </div>
 
@@ -70,7 +76,7 @@
                 </button>
             </div>
             <div class="flex-2 text-center">
-                <h1 class="text-5xl sm:text-6xl font-extrabold text-orange-400 neon-glow">MuDoc V4</h1>
+                <h1 class="text-5xl sm:text-6xl font-extrabold text-blue-400 neon-glow">MuDoc V6</h1>
                 <p class="mt-1 text-lg text-gray-400">
                     Kullanıcı ID: <span id="user-id-display" class="font-mono text-xs bg-gray-700 rounded-md px-2 py-0.5 ml-1">Yükleniyor...</span>
                 </p>
@@ -82,16 +88,16 @@
 
             <!-- 1. Konumlar Listesi (Containers) -->
             <div class="lg:col-span-1 p-6 bg-gray-800 rounded-xl card-glow h-fit">
-                <h2 class="text-3xl font-bold mb-4 text-orange-400">Konumlar</h2>
+                <h2 class="text-3xl font-bold mb-4 text-blue-400">Veri Konumları</h2>
 
                 <!-- Add New Container Form -->
-                <div class="space-y-3 mb-6 p-3 bg-gray-900 rounded-lg border border-orange-500/30">
+                <div class="space-y-3 mb-6 p-3 bg-gray-900 rounded-lg border border-blue-500/30">
                     <input type="text" id="new-container-name" placeholder="Yeni Konum Adı (örn: Ofis)"
-                           class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 text-sm">
+                           class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg text-sm focus:ring-blue-500/50 placeholder-gray-500">
                     <input type="password" id="new-container-password" placeholder="Şifre (Zorunlu Değil)"
-                           class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 text-sm">
+                           class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg text-sm focus:ring-blue-500/50 placeholder-gray-500">
                     <button onclick="createContainer()"
-                            class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow text-sm">
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow text-sm">
                         Konum Oluştur
                     </button>
                 </div>
@@ -108,7 +114,7 @@
             <!-- 2. Konum İçeriği (Container Content) -->
             <div class="lg:col-span-3 p-6 bg-gray-800 rounded-xl card-glow min-h-[600px]">
                 <div id="content-area">
-                    <h2 class="text-3xl font-bold mb-4 text-orange-400">İçerik Görüntüleyici</h2>
+                    <h2 class="text-3xl font-bold mb-4 text-blue-400">İçerik Görüntüleyici</h2>
                     <div id="welcome-message" class="text-center py-20 text-gray-500 text-lg">
                         Lütfen soldan bir konum seçin veya yeni bir konum oluşturun.
                     </div>
@@ -118,15 +124,15 @@
         </div>
     </div>
 
-    <!-- --- Modals --- -->
+    <!-- --- Modals (Unchanged from V5) --- -->
 
     <!-- Message Box/Modal (General purpose) -->
     <div id="message-box" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
-            <h3 class="text-xl font-bold text-orange-400 mb-4" id="message-title">Bilgi</h3>
+        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-blue-500">
+            <h3 class="text-xl font-bold text-blue-400 mb-4" id="message-title">Bilgi</h3>
             <p class="text-gray-300 mb-6" id="message-content">Mesaj içeriği.</p>
             <button onclick="closeMessageBox()"
-                    class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow">
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow">
                 Kapat
             </button>
         </div>
@@ -152,13 +158,13 @@
     
     <!-- Password Modal -->
     <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
-            <h3 class="text-xl font-bold text-orange-400 mb-4">Konum Kilitli</h3>
+        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-blue-500">
+            <h3 class="text-xl font-bold text-blue-400 mb-4">Konum Kilitli</h3>
             <p class="text-gray-300 mb-4" id="password-modal-name"></p>
             <input type="password" id="password-modal-input" placeholder="Şifreyi Girin"
-                   class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 mb-4">
+                   class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:ring-blue-500/50 placeholder-gray-500 mb-4">
             <button onclick="unlockContainerAttempt()"
-                    class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow">
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow">
                 Kilidi Aç
             </button>
             <button onclick="closePasswordModal()"
@@ -184,12 +190,12 @@
 
     <!-- Rename Modal -->
     <div id="rename-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-orange-500">
-            <h3 class="text-xl font-bold text-orange-400 mb-4">Konumu Yeniden Adlandır</h3>
+        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-blue-500">
+            <h3 class="text-xl font-bold text-blue-400 mb-4">Konumu Yeniden Adlandır</h3>
             <input type="text" id="rename-modal-input" placeholder="Yeni Ad"
-                   class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 mb-4">
+                   class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:ring-blue-500/50 placeholder-gray-500 mb-4">
             <button onclick="commitRename()"
-                    class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow">
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow">
                 Kaydet
             </button>
             <button onclick="closeRenameModal()"
@@ -204,25 +210,31 @@
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, setLogLevel, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Global Firebase variables
         let app = null;
         let db = null;
         let auth = null;
         let userId = null;
-        let appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // KRİTİK: GLOBAL DEĞİŞKENLERİN GÜVENLİ KULLANIMI
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
         let isAuthReady = false;
         let isAnonymous = false;
+        let isFirebaseAvailable = true; // Assume available until init fails
 
-        // --- Application State ---
+        // --- Application State (Used for temporary data until Auth is ready) ---
         let containers = [];
         let activeContainerId = null;
         let containerToRenameId = null; 
         let confirmationResolver = null;
 
-        // --- Utility Functions (MessageBox, Confirmation, ID generation are the same) ---
-
+        // --- Utility Functions (Omitted for brevity, they are the same as V5) ---
+        // showMessageBox, closeMessageBox, showConfirmationBox, commitConfirmation, generateId, getContainerById
+        
         window.showMessageBox = function(title, content) {
             document.getElementById('message-title').textContent = title;
             document.getElementById('message-content').textContent = content;
@@ -266,15 +278,34 @@
             return containers.find(c => c.id === id);
         }
 
-        // --- Firebase/Firestore Logic ---
+        // --- Data Persistence Logic (Now FIREBASE ONLY) ---
+        
+        async function updateContainer(container) {
+            if (!isAuthReady || !db || !container.id) {
+                console.error("Hata: Firestore için hazır değil.");
+                showMessageBox("Hata", "Veri, kimlik doğrulama tamamlanmadığı için kaydedilemedi.");
+                return;
+            }
 
+            // Prepare data for Firestore
+            const { unlocked, id, ...dataToSave } = container;
+
+            try {
+                // Path: /artifacts/{appId}/users/{userId}/muDocContainers/{containerId}
+                const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
+                await setDoc(containerRef, dataToSave, { merge: true });
+            } catch (e) {
+                console.error("Konteyner güncellenirken Firestore hatası:", e);
+                showMessageBox("Hata", "Konum buluta güncellenemedi.");
+            }
+        }
+        
         function getUserContainersCollection() {
             // Path: /artifacts/{appId}/users/{userId}/muDocContainers
             if (!db || !userId) return null;
             return collection(db, 'artifacts', appId, 'users', userId, 'muDocContainers');
         }
 
-        // Tracks whether the listener has been setup to prevent multiple calls
         let isListenerSetup = false;
         let unsubscribeContainers = null;
 
@@ -285,7 +316,6 @@
 
             const containersCol = getUserContainersCollection();
             if (!containersCol) {
-                // If user logs out, we clear the data and show no containers.
                 containers = [];
                 activeContainerId = null;
                 renderContainersList();
@@ -303,6 +333,7 @@
                         id: doc.id,
                         ...data,
                         content: data.content || [],
+                        // unlocked is transient state, not saved to DB
                         unlocked: data.password ? false : true 
                     });
                 });
@@ -313,36 +344,17 @@
                 renderContainersList();
 
                 if (activeContainerId) {
+                    // Re-select to refresh UI
                     selectContainer(activeContainerId, false);
                 }
 
             }, (error) => {
                 console.error("Firestore Dinleme Hatası:", error);
-                // If permission denied, ensure UI reflects the issue.
-                if (error.code === 'permission-denied') {
-                    showMessageBox("Hata", "Veritabanı erişim hatası. Giriş yapmanız gerekebilir.");
-                } else {
+                if (error.code !== 'permission-denied') {
                     showMessageBox("Hata", "Veritabanı bağlantısı kesildi veya bir hata oluştu.");
                 }
             });
             isListenerSetup = true;
-        }
-
-        async function updateContainer(container) {
-            if (!isAuthReady || !db || !container.id) {
-                showMessageBox("Hata", "Kimlik doğrulama veya veritabanı hazır değil.");
-                return;
-            }
-
-            const { unlocked, id, ...dataToSave } = container;
-
-            try {
-                const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
-                await setDoc(containerRef, dataToSave, { merge: true });
-            } catch (e) {
-                console.error("Konteyner güncellenirken hata:", e);
-                showMessageBox("Hata", "Konum güncellenemedi. Lütfen internet bağlantınızı kontrol edin.");
-            }
         }
 
 
@@ -373,38 +385,34 @@
         }
 
         async function initFirebase() {
-            // EK KORUMA: 5 saniye içinde auth değişimi olmazsa yükleme ekranını kapat.
-            const loadingTimeout = setTimeout(() => {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                document.getElementById('main-app-content').classList.remove('hidden');
-                if (!isAuthReady) {
-                    // Yalnızca auth hazır değilse uyarı göster
-                    showMessageBox("Kritik Hata (Zaman Aşımı)", "Uygulama 5 saniye içinde başlatılamadı. Bu, eksik veya hatalı Firebase yapılandırmasından ya da ağ sorunlarından kaynaklanabilir. Konsolu kontrol edin.");
-                }
-            }, 5000); // 5 saniye bekleme
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const mainContent = document.getElementById('main-app-content');
+            let initialAuthAttempted = false;
 
+            // 1. Get Config Securely from Environment
+            let firebaseConfig = null;
             try {
-                // Detaylı konsol çıktısı için debug seviyesini ayarla
-                setLogLevel('debug'); 
-                
-                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-
+                // KRİTİK: Sizin yapılandırmanız buraya otomatik olarak yükleniyor.
+                firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
                 if (Object.keys(firebaseConfig).length === 0) {
-                    console.error("Firebase yapılandırması eksik. Uygulama başlatılamadı.");
-                    // Konfigürasyon yoksa zaman aşımını iptal et ve özel hata mesajını göster.
-                    clearTimeout(loadingTimeout);
-                    document.getElementById('loading-overlay').classList.add('hidden');
-                    document.getElementById('main-app-content').classList.remove('hidden');
-                    showMessageBox("Kritik Hata", "Uygulama başlatılamadı: Firebase yapılandırması (API anahtarları vb.) eksik. Uygulamanın çalışması için bu gereklidir.");
-                    return; 
+                    throw new Error("Boş veya geçersiz Firebase yapılandırması.");
                 }
+            } catch (e) {
+                console.error("Firebase yapılandırması alınırken hata:", e);
+                isFirebaseAvailable = false;
+                showMessageBox("Kritik Hata", "Sistemden Firebase yapılandırması alınamadı. Uygulama çalıştırılamaz.");
+                loadingOverlay.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                return;
+            }
 
+            // 2. Full Mode: Firebase Initialization
+            try {
+                setLogLevel('debug'); 
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                let initialAuthAttempted = false;
-
                 // --- Auth State Listener ---
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
@@ -416,44 +424,40 @@
                         setupContainerListener();
 
                     } else {
-                        // No user signed in (e.g., after signOut)
+                        // User signed out, or initial state
                         userId = null;
                         isAnonymous = false;
                         isAuthReady = true;
                         
                         updateAuthUI();
-                        setupContainerListener(); // This will clear the UI
+                        setupContainerListener(); 
 
-                        // Only attempt initial sign-in if the listener reports no user
                         if (!initialAuthAttempted) {
-                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            // Initial sign-in logic (custom token > anonymous)
+                            if (initialAuthToken) {
                                 try {
-                                    await signInWithCustomToken(auth, __initial_auth_token);
+                                    await signInWithCustomToken(auth, initialAuthToken);
                                 } catch (e) {
-                                    // If custom token fails, fall back to anonymous
                                     await signInAnonymously(auth);
                                 }
                             } else {
-                                // Standard anonymous sign-in if no special token
                                 await signInAnonymously(auth);
                             }
                         }
                     }
                     
-                    // GÜNCELLEME: Yükleme ekranını kimlik doğrulama durumu belirlenir belirlenmez gizle.
                     if (isAuthReady) {
-                        clearTimeout(loadingTimeout); // Başarılı olunca zaman aşımını iptal et
-                        document.getElementById('loading-overlay').classList.add('hidden');
-                        document.getElementById('main-app-content').classList.remove('hidden');
+                        loadingOverlay.classList.add('hidden');
+                        mainContent.classList.remove('hidden');
                     }
                 });
                 
-                // --- Initial Auth Check (to kick off the listener if needed) ---
+                // Trigger initial sign-in if needed
                 if (!auth.currentUser) {
                     initialAuthAttempted = true; 
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    if (initialAuthToken) {
                         try {
-                            await signInWithCustomToken(auth, __initial_auth_token);
+                            await signInWithCustomToken(auth, initialAuthToken);
                         } catch (e) {
                             await signInAnonymously(auth);
                         }
@@ -464,17 +468,20 @@
 
             } catch (e) {
                 console.error("Firebase Initialization or Auth Failed (Kritik):", e);
-                clearTimeout(loadingTimeout); // Hata yakalanırsa zaman aşımını iptal et
-                document.getElementById('loading-overlay').classList.add('hidden');
-                document.getElementById('main-app-content').classList.remove('hidden');
+                loadingOverlay.classList.add('hidden');
+                mainContent.classList.remove('hidden');
                 showMessageBox("Kritik Hata", "Firebase başlatılırken beklenmedik bir hata oluştu. Lütfen konsolu kontrol edin.");
             }
         }
 
 
-        // --- Authentication Modal Logic (FIXED: Attached to window) ---
-
+        // --- Authentication Modal Logic (Same as V5) ---
+        
         window.openAuthModal = function() {
+            if (!isFirebaseAvailable) {
+                showMessageBox("Hata", "Firebase başlatılamadı.");
+                return;
+            }
             renderAuthContent();
             document.getElementById('auth-modal').classList.remove('hidden');
             document.getElementById('auth-modal').classList.add('flex');
@@ -486,10 +493,9 @@
         }
 
         function renderAuthContent() {
-            const contentDiv = document.getElementById('auth-content');
+             const contentDiv = document.getElementById('auth-content');
             
             if (auth.currentUser && auth.currentUser.email) {
-                // User is signed in with email/password
                 contentDiv.innerHTML = `
                     <p class="text-gray-300 mb-4">Şu an kalıcı bir hesapla giriş yapmış durumdasınız.</p>
                     <p class="text-lg font-semibold text-green-400 mb-6">E-posta: ${auth.currentUser.email}</p>
@@ -499,28 +505,26 @@
                     </button>
                 `;
             } else if (auth.currentUser && auth.currentUser.isAnonymous) {
-                // User is anonymous
                 contentDiv.innerHTML = `
-                    <p class="text-gray-300 mb-4">Şu an anonim bir oturumdasınız. Verilerinize yalnızca bu cihazdan erişebilirsiniz. Kalıcı bir hesap oluşturmak veya giriş yapmak için aşağıdaki formu kullanın.</p>
+                    <p class="text-gray-300 mb-4">Şu an anonim bir oturumdasınız. Kalıcı bir hesap oluşturmak için aşağıdaki formu kullanın.</p>
                     <hr class="border-gray-700 my-4">
 
                     <input type="email" id="auth-email" placeholder="E-posta Adresi"
-                           class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500">
+                           class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-3 focus:ring-blue-500/50 placeholder-gray-500">
                     <input type="password" id="auth-password" placeholder="Şifre (min 6 karakter)"
-                           class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500">
+                           class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-4 focus:ring-blue-500/50 placeholder-gray-500">
                     
                     <button onclick="handleSignIn()"
                             class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg btn-glow mb-3">
                         Giriş Yap
                     </button>
                     <button onclick="handleSignUp()"
-                            class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg btn-glow">
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg btn-glow">
                         Yeni Hesap Oluştur
                     </button>
                 `;
             } else {
-                 // Fallback if auth state is ambiguous or null (shouldn't happen often)
-                contentDiv.innerHTML = `<p class="text-gray-400">Kimlik doğrulama durumu yükleniyor...</p>`;
+                 contentDiv.innerHTML = `<p class="text-gray-400">Kimlik doğrulama durumu yükleniyor...</p>`;
             }
         }
 
@@ -534,10 +538,9 @@
             }
 
             try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await createUserWithEmailAndPassword(auth, email, password);
                 closeAuthModal();
-                showMessageBox("Başarılı", `Hoş geldiniz, ${email}! Hesabınız başarıyla oluşturuldu ve giriş yapıldı. Mevcut anonim oturumunuzdaki verilere artık erişilemiyor.`);
-                // The onAuthStateChanged listener handles state change and data loading.
+                showMessageBox("Başarılı", `Hoş geldiniz, ${email}! Hesabınız başarıyla oluşturuldu.`);
             } catch (error) {
                 console.error("Kayıt Hatası:", error);
                 let message = "Kayıt olurken bir hata oluştu.";
@@ -565,7 +568,6 @@
                 await signInWithEmailAndPassword(auth, email, password);
                 closeAuthModal();
                 showMessageBox("Başarılı", `Tekrar hoş geldiniz, ${email}! Giriş yapıldı.`);
-                // The onAuthStateChanged listener handles state change and data loading.
             } catch (error) {
                 console.error("Giriş Hatası:", error);
                 let message = "Giriş yapılırken bir hata oluştu.";
@@ -583,7 +585,6 @@
                     await signOut(auth);
                     closeAuthModal();
                     showMessageBox("Başarılı", "Başarıyla çıkış yapıldı. Anonim oturuma geçiliyor...");
-                    // The onAuthStateChanged listener will automatically re-authenticate as anonymous/default user.
                 } catch (error) {
                     console.error("Çıkış Hatası:", error);
                     showMessageBox("Hata", "Çıkış yapılırken bir hata oluştu.");
@@ -592,7 +593,7 @@
         }
 
 
-        // --- Container UI and Actions (Mostly the same, just ensuring calls use isAuthReady) ---
+        // --- Container UI and Actions (Same as V5, now pointing only to Firestore) ---
 
         function renderContainersList() {
             const listContainer = document.getElementById('containers-list');
@@ -609,7 +610,7 @@
 
             containers.forEach(container => {
                 const isActive = container.id === activeContainerId;
-                const isLocked = container.password && !container.unlocked;
+                const isLocked = container.password && !container.unlocked; 
 
                 const itemDiv = document.createElement('div');
                 itemDiv.id = `container-${container.id}`;
@@ -620,7 +621,7 @@
                 
                 itemDiv.innerHTML = `
                     <span class="flex items-center truncate">
-                        ${isLocked ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 1010 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-orange-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>'}
+                        ${isLocked ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 1010 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>'}
                         <span class="truncate">${container.name}</span>
                     </span>
                     <span class="text-xs text-gray-400 ml-2">${itemCount} öğe</span>
@@ -631,8 +632,8 @@
         }
         
         window.createContainer = async function() {
-            if (!isAuthReady || !userId) {
-                showMessageBox("Uyarı", "Lütfen önce giriş yapın veya oturumun yüklenmesini bekleyin.");
+            if (!isAuthReady) {
+                showMessageBox("Uyarı", "Lütfen oturumun yüklenmesini bekleyin.");
                 return;
             }
             
@@ -647,26 +648,33 @@
             }
 
             const newContainerData = {
+                id: generateId(), // Generate ID locally always
                 name: name,
                 password: password,
-                content: []
+                content: [],
+                unlocked: password ? false : true // Transient state
             };
 
+            // FIREBASE: Add document
             try {
                 const containersCol = getUserContainersCollection();
                 if (!containersCol) throw new Error("Koleksiyon referansı alınamadı.");
 
-                const docRef = await addDoc(containersCol, newContainerData);
-                showMessageBox("Başarılı", "Yeni konum oluşturuldu.");
-                nameInput.value = '';
-                passwordInput.value = '';
+                // Only send necessary fields to Firestore (not 'unlocked')
+                const { unlocked, ...dataToSave } = newContainerData;
+                const docRef = await addDoc(containersCol, dataToSave);
                 
+                showMessageBox("Başarılı", "Yeni konum buluta oluşturuldu.");
                 activeContainerId = docRef.id;
 
             } catch (e) {
-                console.error("Konum oluşturulurken hata:", e);
-                showMessageBox("Hata", "Yeni konum oluşturulamadı.");
+                console.error("Konum oluşturulurken Firestore hatası:", e);
+                showMessageBox("Hata", "Yeni konum oluşturulamadı. Veritabanı hatası.");
             }
+            
+            nameInput.value = '';
+            passwordInput.value = '';
+            selectContainer(activeContainerId, false); // Select it immediately
         }
         
         function selectContainer(id, shouldCheckLock = true) {
@@ -679,11 +687,7 @@
             if (container.password && !container.unlocked && shouldCheckLock) {
                 showPasswordModal(container.name);
             } else {
-                if (container.password && !container.unlocked) {
-                    document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
-                } else {
-                    renderContainerContent(container);
-                }
+                renderContainerContent(container);
             }
         }
 
@@ -694,13 +698,15 @@
                 try {
                     const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
                     await deleteDoc(containerRef);
-                    activeContainerId = null;
-                    document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
-                    showMessageBox("Başarılı", "Konum başarıyla silindi.");
+                    showMessageBox("Başarılı", "Konum buluttan silindi.");
                 } catch (e) {
-                    console.error("Konum silinirken hata:", e);
+                    console.error("Konum silinirken Firestore hatası:", e);
                     showMessageBox("Hata", "Konum silinemedi. Silme işlemi sırasında bir veritabanı hatası oluştu.");
                 }
+                
+                // Common post-delete actions
+                activeContainerId = null;
+                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
             }
         }
 
@@ -768,7 +774,7 @@
 
             if (container) {
                 container.name = newName;
-                await updateContainer(container); // Save to Firestore
+                await updateContainer(container); 
                 closeRenameModal();
             }
         }
@@ -777,8 +783,8 @@
             const contentArea = document.getElementById('content-area');
 
             const headerHtml = `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-6 border-orange-500/50">
-                    <h2 class="text-4xl font-extrabold text-orange-400 neon-glow mb-2 sm:mb-0 truncate">${container.name}</h2>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-6 border-blue-500/50">
+                    <h2 class="text-4xl font-extrabold text-blue-400 neon-glow mb-2 sm:mb-0 truncate">${container.name}</h2>
                     <div class="flex space-x-3 mt-2 sm:mt-0">
                         <button onclick="openRenameModal('${container.id}')"
                                 class="bg-gray-700 hover:bg-gray-600 text-gray-200 py-1 px-3 rounded-md text-sm btn-glow">
@@ -798,23 +804,23 @@
                 <!-- Add Note/File Forms -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <!-- Add Note -->
-                    <div class="p-4 bg-gray-900 rounded-lg border border-orange-500/30">
+                    <div class="p-4 bg-gray-900 rounded-lg border border-blue-500/30">
                         <h3 class="text-xl font-bold text-gray-200 mb-3">Yeni Not Ekle</h3>
-                        <input type="text" id="note-title" placeholder="Not Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-2 text-sm">
-                        <textarea id="note-content" rows="4" placeholder="Not içeriği..." class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg resize-none mb-2 text-sm"></textarea>
-                        <button onclick="addNoteToContainer('${container.id}')" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow text-sm">
+                        <input type="text" id="note-title" placeholder="Not Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-2 text-sm focus:ring-blue-500/50">
+                        <textarea id="note-content" rows="4" placeholder="Not içeriği..." class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg resize-none mb-2 text-sm focus:ring-blue-500/50"></textarea>
+                        <button onclick="addNoteToContainer('${container.id}')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow text-sm">
                             Notu Kaydet
                         </button>
                     </div>
 
                     <!-- Add File/Image -->
-                    <div class="p-4 bg-gray-900 rounded-lg border border-orange-500/30">
+                    <div class="p-4 bg-gray-900 rounded-lg border border-blue-500/30">
                         <h3 class="text-xl font-bold text-gray-200 mb-3">Dosya/Fotoğraf Yükle (Max 5MB)</h3>
                         <p class="text-xs text-red-400 mb-3">UYARI: Veriler Base64 olarak DB'ye kaydedilir. Büyük dosyalar performansı düşürür.</p>
                         <input type="file" id="file-input-${container.id}" 
-                               class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
-                        <input type="text" id="file-title-${container.id}" placeholder="Dosya Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg my-2 text-sm">
-                        <button onclick="handleFileUpload('${container.id}')" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg btn-glow text-sm mt-2">
+                               class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <input type="text" id="file-title-${container.id}" placeholder="Dosya Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg my-2 text-sm focus:ring-blue-500/50">
+                        <button onclick="handleFileUpload('${container.id}')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow text-sm mt-2">
                             Yükle ve Kaydet
                         </button>
                     </div>
@@ -858,7 +864,7 @@
                 let bgColor = 'bg-gray-900';
                 
                 if (item.type === 'note') {
-                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-4.243 4.243a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414L8 10l-.257-1.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg>`;
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-4.243 4.243a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414L8 10l-.257-1.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg>`;
                     contentHtml = `<p class="text-sm text-gray-400 mt-1 whitespace-pre-wrap">${item.data.substring(0, 150)}${item.data.length > 150 ? '...' : ''}</p>`;
                     bgColor = 'bg-gray-900/70';
                 } else if (item.type === 'image') {
@@ -866,12 +872,12 @@
                     contentHtml = `<img src="${item.data}" alt="${item.title}" class="max-h-24 w-auto rounded-md mt-2 border border-gray-600"/>`;
                     bgColor = 'bg-gray-900/50';
                 } else if (item.type === 'file') {
-                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7z" /><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>`;
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7z" /><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>`;
                     contentHtml = `<a href="${item.data}" download="${item.title}" class="text-blue-400 hover:text-blue-300 text-sm underline mt-1 block">Dosyayı İndir (${item.mimeType ? item.mimeType.split('/')[1] : 'Bilinmiyor'})</a>`;
                     bgColor = 'bg-gray-900/70';
                 }
 
-                itemDiv.className = `p-4 ${bgColor} rounded-lg border border-gray-700 flex justify-between items-start transition duration-150 hover:border-orange-500/50`;
+                itemDiv.className = `p-4 ${bgColor} rounded-lg border border-gray-700 flex justify-between items-start transition duration-150 hover:border-blue-500/50`;
                 itemDiv.innerHTML = `
                     <div class="flex-grow min-w-0">
                         <div class="flex items-start">
