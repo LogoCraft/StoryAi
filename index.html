@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuDoc V6 - Güvenli Veri Konumları</title>
+    <title>MuDoc V7 - Dayanıklı Başlatma</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -57,11 +57,11 @@
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-8">
 
-    <!-- Loading Screen (Displayed until Firebase Auth is ready and data is loaded) -->
+    <!-- Loading Screen (Displayed until Firebase Auth is ready or failed) -->
     <div id="loading-overlay" class="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-[100]">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
         <p class="mt-4 text-blue-400 text-lg font-semibold">Güvenli Oturum Başlatılıyor...</p>
-        <p class="mt-2 text-gray-500 text-sm">Verileriniz sunucudan yükleniyor.</p>
+        <p class="mt-2 text-gray-500 text-sm">Veri yapılandırması yükleniyor.</p>
     </div>
 
     <!-- Main Content Grid -->
@@ -76,7 +76,7 @@
                 </button>
             </div>
             <div class="flex-2 text-center">
-                <h1 class="text-5xl sm:text-6xl font-extrabold text-blue-400 neon-glow">MuDoc V6</h1>
+                <h1 class="text-5xl sm:text-6xl font-extrabold text-blue-400 neon-glow">MuDoc V7</h1>
                 <p class="mt-1 text-lg text-gray-400">
                     Kullanıcı ID: <span id="user-id-display" class="font-mono text-xs bg-gray-700 rounded-md px-2 py-0.5 ml-1">Yükleniyor...</span>
                 </p>
@@ -124,7 +124,7 @@
         </div>
     </div>
 
-    <!-- --- Modals (Unchanged from V5) --- -->
+    <!-- --- Modals --- -->
 
     <!-- Message Box/Modal (General purpose) -->
     <div id="message-box" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
@@ -210,7 +210,7 @@
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, setLogLevel, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Global Firebase variables
         let app = null;
@@ -218,7 +218,7 @@
         let auth = null;
         let userId = null;
         
-        // KRİTİK: GLOBAL DEĞİŞKENLERİN GÜVENLİ KULLANIMI
+        // CRITICAL: Secure usage of global environment variables
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
@@ -226,15 +226,14 @@
         let isAnonymous = false;
         let isFirebaseAvailable = true; // Assume available until init fails
 
-        // --- Application State (Used for temporary data until Auth is ready) ---
+        // --- Application State ---
         let containers = [];
         let activeContainerId = null;
         let containerToRenameId = null; 
         let confirmationResolver = null;
 
-        // --- Utility Functions (Omitted for brevity, they are the same as V5) ---
-        // showMessageBox, closeMessageBox, showConfirmationBox, commitConfirmation, generateId, getContainerById
-        
+        // --- Utility Functions (Modal & Confirmation) ---
+        // (Simplified for brevity, same as previous versions)
         window.showMessageBox = function(title, content) {
             document.getElementById('message-title').textContent = title;
             document.getElementById('message-content').textContent = content;
@@ -277,11 +276,11 @@
         function getContainerById(id) {
             return containers.find(c => c.id === id);
         }
-
-        // --- Data Persistence Logic (Now FIREBASE ONLY) ---
+        
+        // --- Data Persistence Logic (FIREBASE ONLY) ---
         
         async function updateContainer(container) {
-            if (!isAuthReady || !db || !container.id) {
+            if (!isAuthReady || !db || !container.id || !isFirebaseAvailable) {
                 console.error("Hata: Firestore için hazır değil.");
                 showMessageBox("Hata", "Veri, kimlik doğrulama tamamlanmadığı için kaydedilemedi.");
                 return;
@@ -302,7 +301,7 @@
         
         function getUserContainersCollection() {
             // Path: /artifacts/{appId}/users/{userId}/muDocContainers
-            if (!db || !userId) return null;
+            if (!db || !userId || !isFirebaseAvailable) return null;
             return collection(db, 'artifacts', appId, 'users', userId, 'muDocContainers');
         }
 
@@ -310,6 +309,13 @@
         let unsubscribeContainers = null;
 
         function setupContainerListener() {
+            if (!isFirebaseAvailable) {
+                 // Firebase available değilse dinleyici kurmaya çalışma
+                 containers = [];
+                 renderContainersList();
+                 return;
+            }
+
             if (isListenerSetup && unsubscribeContainers) {
                 unsubscribeContainers(); // Stop the old listener if exists
             }
@@ -363,6 +369,15 @@
         function updateAuthUI() {
             const authStatusText = document.getElementById('auth-status-text');
             const userIdDisplay = document.getElementById('user-id-display');
+            const authButton = document.getElementById('auth-button');
+
+            if (!isFirebaseAvailable) {
+                authStatusText.textContent = 'HATA (Kapalı)';
+                authStatusText.classList.add('text-red-400');
+                userIdDisplay.textContent = 'YOK';
+                authButton.disabled = true;
+                return;
+            }
 
             if (userId) {
                 userIdDisplay.textContent = userId;
@@ -384,30 +399,31 @@
             }
         }
 
-        async function initFirebase() {
-            const loadingOverlay = document.getElementById('loading-overlay');
-            const mainContent = document.getElementById('main-app-content');
-            let initialAuthAttempted = false;
+        // Utility to hide loading screen and show main content
+        function finalizeUILoad() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('main-app-content').classList.remove('hidden');
+            updateAuthUI();
+            if (!isFirebaseAvailable) {
+                 showMessageBox("Kritik Hata", "Sistemden Firebase yapılandırması alınamadı. Uygulama çalıştırılamaz. (Veritabanı işlemleri devre dışı)");
+            }
+        }
 
+        async function initFirebase() {
             // 1. Get Config Securely from Environment
             let firebaseConfig = null;
             try {
-                // KRİTİK: Sizin yapılandırmanız buraya otomatik olarak yükleniyor.
-                firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-                if (Object.keys(firebaseConfig).length === 0) {
+                // CRITICAL: Retrieve config string safely
+                const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+                if (configString) {
+                    firebaseConfig = JSON.parse(configString);
+                }
+                
+                if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
                     throw new Error("Boş veya geçersiz Firebase yapılandırması.");
                 }
-            } catch (e) {
-                console.error("Firebase yapılandırması alınırken hata:", e);
-                isFirebaseAvailable = false;
-                showMessageBox("Kritik Hata", "Sistemden Firebase yapılandırması alınamadı. Uygulama çalıştırılamaz.");
-                loadingOverlay.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-                return;
-            }
-
-            // 2. Full Mode: Firebase Initialization
-            try {
+                
+                // If successful, proceed with Firebase init
                 setLogLevel('debug'); 
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -418,22 +434,14 @@
                     if (user) {
                         userId = user.uid;
                         isAnonymous = user.isAnonymous;
-                        isAuthReady = true;
-
-                        updateAuthUI();
                         setupContainerListener();
-
                     } else {
-                        // User signed out, or initial state
+                        // If signed out, ensure cleanup and anonymous sign-in
                         userId = null;
                         isAnonymous = false;
-                        isAuthReady = true;
-                        
-                        updateAuthUI();
                         setupContainerListener(); 
 
-                        if (!initialAuthAttempted) {
-                            // Initial sign-in logic (custom token > anonymous)
+                        if (!auth.currentUser) {
                             if (initialAuthToken) {
                                 try {
                                     await signInWithCustomToken(auth, initialAuthToken);
@@ -446,40 +454,38 @@
                         }
                     }
                     
-                    if (isAuthReady) {
-                        loadingOverlay.classList.add('hidden');
-                        mainContent.classList.remove('hidden');
+                    // Auth is ready only after the first auth check/sign-in attempt
+                    if (!isAuthReady) {
+                        isAuthReady = true;
+                        finalizeUILoad();
                     }
+                    updateAuthUI();
                 });
                 
-                // Trigger initial sign-in if needed
+                // Trigger initial sign-in attempt if not already in listener
                 if (!auth.currentUser) {
-                    initialAuthAttempted = true; 
                     if (initialAuthToken) {
-                        try {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } catch (e) {
-                            await signInAnonymously(auth);
-                        }
+                        await signInWithCustomToken(auth, initialAuthToken).catch(e => signInAnonymously(auth));
                     } else {
                         await signInAnonymously(auth);
                     }
                 }
 
             } catch (e) {
-                console.error("Firebase Initialization or Auth Failed (Kritik):", e);
-                loadingOverlay.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-                showMessageBox("Kritik Hata", "Firebase başlatılırken beklenmedik bir hata oluştu. Lütfen konsolu kontrol edin.");
+                // --- CRITICAL FAILURE HANDLING ---
+                console.error("Kritik: Firebase Initialization or Config Failed:", e);
+                isFirebaseAvailable = false;
+                isAuthReady = true; // Mark as ready so UI can finalize
+                finalizeUILoad(); // Show UI with error message
             }
         }
 
 
-        // --- Authentication Modal Logic (Same as V5) ---
+        // --- Authentication Modal Logic (Same as V6) ---
         
         window.openAuthModal = function() {
             if (!isFirebaseAvailable) {
-                showMessageBox("Hata", "Firebase başlatılamadı.");
+                showMessageBox("Hata", "Firebase başlatılamadı. Oturum işlemleri devre dışı.");
                 return;
             }
             renderAuthContent();
@@ -529,9 +535,10 @@
         }
 
         window.handleSignUp = async function() {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
-
+            // ... (rest of sign-up logic)
             if (!email || !password) {
                 showMessageBox("Uyarı", "Lütfen e-posta ve şifrenizi girin.");
                 return;
@@ -556,10 +563,12 @@
         }
 
         window.handleSignIn = async function() {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
 
-            if (!email || !password) {
+            // ... (rest of sign-in logic)
+             if (!email || !password) {
                 showMessageBox("Uyarı", "Lütfen e-posta ve şifrenizi girin.");
                 return;
             }
@@ -579,6 +588,7 @@
         }
 
         window.handleSignOut = async function() {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             const confirmed = await showConfirmationBox("Çıkış Yap", "Oturumu kapatmak istediğinizden emin misiniz? Anonim oturuma geçilecektir.");
             if (confirmed) {
                 try {
@@ -593,11 +603,16 @@
         }
 
 
-        // --- Container UI and Actions (Same as V5, now pointing only to Firestore) ---
+        // --- Container UI and Actions (All now check isFirebaseAvailable) ---
 
         function renderContainersList() {
             const listContainer = document.getElementById('containers-list');
             listContainer.innerHTML = ''; 
+
+            if (!isFirebaseAvailable) {
+                listContainer.innerHTML = `<p class="text-center py-4 text-red-500 text-sm">Veritabanı Hatası. Konumlar yüklenemiyor.</p>`;
+                return;
+            }
 
             if (containers.length === 0) {
                 listContainer.innerHTML = `
@@ -632,6 +647,7 @@
         }
         
         window.createContainer = async function() {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             if (!isAuthReady) {
                 showMessageBox("Uyarı", "Lütfen oturumun yüklenmesini bekleyin.");
                 return;
@@ -648,11 +664,11 @@
             }
 
             const newContainerData = {
-                id: generateId(), // Generate ID locally always
+                id: generateId(), 
                 name: name,
                 password: password,
                 content: [],
-                unlocked: password ? false : true // Transient state
+                unlocked: password ? false : true 
             };
 
             // FIREBASE: Add document
@@ -660,7 +676,6 @@
                 const containersCol = getUserContainersCollection();
                 if (!containersCol) throw new Error("Koleksiyon referansı alınamadı.");
 
-                // Only send necessary fields to Firestore (not 'unlocked')
                 const { unlocked, ...dataToSave } = newContainerData;
                 const docRef = await addDoc(containersCol, dataToSave);
                 
@@ -674,7 +689,7 @@
             
             nameInput.value = '';
             passwordInput.value = '';
-            selectContainer(activeContainerId, false); // Select it immediately
+            selectContainer(activeContainerId, false);
         }
         
         function selectContainer(id, shouldCheckLock = true) {
@@ -692,6 +707,7 @@
         }
 
         window.deleteContainer = async function(id) {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             const confirmed = await showConfirmationBox("Konumu Sil", "Bu konumu ve içindeki TÜM içeriği kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.");
 
             if (confirmed) {
@@ -704,11 +720,12 @@
                     showMessageBox("Hata", "Konum silinemedi. Silme işlemi sırasında bir veritabanı hatası oluştu.");
                 }
                 
-                // Common post-delete actions
                 activeContainerId = null;
                 document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
             }
         }
+        
+        // ... (remaining modal logic for password, rename, content rendering, and actions like addNote/handleFileUpload/deleteContentItem remain largely the same, but rely on isFirebaseAvailable being true)
 
         window.unlockContainerAttempt = function() {
             const passwordInput = document.getElementById('password-modal-input').value;
@@ -748,6 +765,7 @@
         }
 
         window.openRenameModal = function(id) {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             const container = getContainerById(id);
             if (!container) return;
 
@@ -764,6 +782,7 @@
         }
 
         window.commitRename = async function() {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             const newName = document.getElementById('rename-modal-input').value.trim();
             const container = getContainerById(containerToRenameId);
 
@@ -856,8 +875,8 @@
                 list.innerHTML = `<p class="text-center py-10 text-gray-500">Bu konumda henüz hiç dosya veya not yok.</p>`;
                 return;
             }
-
-            container.content.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(item => {
+            // ... (rendering content items logic remains the same)
+             container.content.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(item => {
                 const itemDiv = document.createElement('div');
                 let contentHtml = '';
                 let icon = '';
@@ -899,12 +918,13 @@
         }
 
         window.addNoteToContainer = async function(containerId) {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             const container = getContainerById(containerId);
             if (!container || !isAuthReady) {
                  showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
                 return;
             }
-            
+            // ... (rest of add note logic)
             const titleInput = document.getElementById('note-title');
             const contentInput = document.getElementById('note-content');
             const title = titleInput.value.trim();
@@ -932,12 +952,13 @@
         }
 
         window.handleFileUpload = async function(containerId) {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             const container = getContainerById(containerId);
             if (!container || !isAuthReady) {
                  showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
                 return;
             }
-            
+            // ... (rest of file upload logic)
             const fileInput = document.getElementById(`file-input-${containerId}`);
             const titleInput = document.getElementById(`file-title-${containerId}`);
             const file = fileInput.files[0];
@@ -986,6 +1007,7 @@
         }
 
         window.deleteContentItem = async function(containerId, itemId) {
+            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
             const confirmed = await showConfirmationBox("Öğeyi Sil", "Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?");
 
             if (confirmed) {
@@ -997,6 +1019,7 @@
                 }
             }
         }
+
 
         // --- Initialization ---
         window.onload = initFirebase;
