@@ -1,1054 +1,385 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuDoc V9 - Zorunlu UI Yükleme</title>
-    <!-- Tailwind CSS CDN -->
+    <title>30 Günlük Master Plan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        theme_red: '#FF4136', /* Custom Bright Red */
+                        dark: '#0d0d0d',
+                        darker: '#050505',
+                        panel: '#1a1a1a'
+                    },
+                    fontFamily: {
+                        mono: ['Courier New', 'monospace'],
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        /* CSS for the glow/illumination effect */
-        .neon-glow {
-            text-shadow: 0 0 5px #38bdf8, 0 0 10px #38bdf8, 0 0 20px #0ea5e9;
-        }
-        .card-glow {
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.2);
-        }
-        .btn-glow {
-            transition: all 0.2s ease-in-out;
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
-        }
-        .btn-glow:hover {
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.9), 0 0 30px rgba(59, 130, 246, 0.5);
-            transform: translateY(-1px);
-        }
         body {
+            background-color: #050505;
+            color: #e0e0e0;
             font-family: 'Inter', sans-serif;
-            background-color: #0d0d0d;
         }
-        /* Scrollbar styling for a dark theme */
+        .neon-text {
+            color: #FF4136; /* Bright Red Text */
+            text-shadow: 0 0 5px rgba(255, 65, 54, 0.5);
+        }
+        .accordion-content {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.active {
+            max-height: 1000px;
+            opacity: 1;
+        }
+        .check-custom {
+            accent-color: #FF4136; /* Bright Red Accent */
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        /* Custom Scrollbar (Red) */
         ::-webkit-scrollbar {
             width: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #1f2937;
+            background: #0d0d0d;
         }
         ::-webkit-scrollbar-thumb {
-            background: #3b82f6;
+            background: #FF4136;
             border-radius: 4px;
-        }
-        .container-item.active {
-            background-color: #3b82f6;
-            color: #1f2937;
-            font-weight: 600;
-        }
-        .container-item.active .text-gray-400 {
-            color: #1f2937 !important;
-        }
-        /* Override Tailwind for clean text areas */
-        textarea:focus, input:focus {
-            outline: none !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-            border-color: #3b82f6;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-8">
+<body class="min-h-screen pb-20">
 
-    <!-- Loading Screen (Displayed until Firebase Auth is ready or failed) -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-[100]">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-        <p class="mt-4 text-blue-400 text-lg font-semibold">Oturum Açılıyor ve Yapılandırma Kontrol Ediliyor...</p>
-        <p class="mt-2 text-gray-500 text-sm" id="loading-status">Firebase bağlantısı bekleniyor...</p>
-    </div>
-
-    <!-- Main Content Grid -->
-    <div id="main-app-content" class="max-w-7xl mx-auto hidden">
-        <!-- Header -->
-        <header class="text-center mb-6 border-b border-gray-700 pb-4 flex justify-between items-center">
-            <div class="flex-1 text-left">
-                <button id="auth-button" onclick="openAuthModal()" 
-                        class="bg-gray-700 hover:bg-gray-600 text-gray-200 py-2 px-4 rounded-lg text-sm btn-glow flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
-                    <span id="auth-status-text">Hesap</span>
-                </button>
-            </div>
-            <div class="flex-2 text-center">
-                <h1 class="text-5xl sm:text-6xl font-extrabold text-blue-400 neon-glow">MuDoc V9</h1>
-                <p class="mt-1 text-lg text-gray-400">
-                    Oturum ID: <span id="user-id-display" class="font-mono text-xs bg-gray-700 rounded-md px-2 py-0.5 ml-1">Yükleniyor...</span>
-                </p>
-            </div>
-            <div class="flex-1"></div> <!-- Spacer -->
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-
-            <!-- 1. Konumlar Listesi (Containers) -->
-            <div class="lg:col-span-1 p-6 bg-gray-800 rounded-xl card-glow h-fit">
-                <h2 class="text-3xl font-bold mb-4 text-blue-400">Veri Konumları</h2>
-
-                <!-- Add New Container Form -->
-                <div class="space-y-3 mb-6 p-3 bg-gray-900 rounded-lg border border-blue-500/30">
-                    <input type="text" id="new-container-name" placeholder="Yeni Konum Adı (örn: Ofis)"
-                           class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg text-sm focus:ring-blue-500/50 placeholder-gray-500">
-                    <input type="password" id="new-container-password" placeholder="Şifre (Zorunlu Değil)"
-                           class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg text-sm focus:ring-blue-500/50 placeholder-gray-500">
-                    <button onclick="createContainer()"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow text-sm">
-                        Konum Oluştur
-                    </button>
-                </div>
-
-                <!-- Containers List -->
-                <div id="containers-list" class="space-y-2 max-h-96 overflow-y-auto">
-                    <!-- Container items will be injected here -->
-                    <p class="text-center py-4 text-gray-500 text-sm" id="no-containers-message">
-                        Henüz hiç konum oluşturulmadı.
-                    </p>
-                </div>
-            </div>
-
-            <!-- 2. Konum İçeriği (Container Content) -->
-            <div class="lg:col-span-3 p-6 bg-gray-800 rounded-xl card-glow min-h-[600px]">
-                <div id="content-area">
-                    <h2 class="text-3xl font-bold mb-4 text-blue-400">İçerik Görüntüleyici</h2>
-                    <div id="welcome-message" class="text-center py-20 text-gray-500 text-lg">
-                        Lütfen soldan bir konum seçin veya yeni bir konum oluşturun.
-                    </div>
-                    <!-- Dynamic content will be loaded here -->
-                </div>
-            </div>
+    <!-- Sticky Header -->
+    <div class="sticky top-0 z-50 bg-darker/95 backdrop-blur-md border-b border-red-900 p-4 shadow-lg">
+        <div class="flex justify-between items-center mb-2">
+            <h1 class="text-2xl font-bold neon-text tracking-tighter"><i class="fas fa-terminal mr-2"></i>MASTER PLAN</h1>
+            <div class="text-xs text-red-400 font-mono" id="current-date">GÜN 1</div>
+        </div>
+        
+        <!-- Progress Bar (Red) -->
+        <div class="w-full bg-gray-800 rounded-full h-3 mb-1">
+            <div id="progress-bar" class="bg-red-500 h-3 rounded-full transition-all duration-500 shadow-[0_0_10px_#FF4136]" style="width: 0%"></div>
+        </div>
+        <div class="flex justify-between text-xs text-gray-400 font-mono">
+            <span>START</span>
+            <span id="progress-text">0%</span>
+            <span>HƏDƏF</span>
         </div>
     </div>
 
-    <!-- --- Modals --- (Same as previous version) -->
-
-    <!-- Message Box/Modal (General purpose) -->
-    <div id="message-box" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-blue-500">
-            <h3 class="text-xl font-bold text-blue-400 mb-4" id="message-title">Bilgi</h3>
-            <p class="text-gray-300 mb-6" id="message-content">Mesaj içeriği.</p>
-            <button onclick="closeMessageBox()"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow">
-                Kapat
-            </button>
-        </div>
+    <!-- Week Selector (Red) -->
+    <div class="p-4 grid grid-cols-4 gap-2 mb-2">
+        <button onclick="switchWeek(1)" class="week-btn active-week bg-red-900/30 border border-red-500 text-red-400 rounded p-2 text-xs font-bold transition-all hover:bg-red-500 hover:text-black">Həftə 1</button>
+        <button onclick="switchWeek(2)" class="week-btn bg-gray-900 border border-gray-700 text-gray-500 rounded p-2 text-xs font-bold transition-all hover:border-red-500 hover:text-red-400">Həftə 2</button>
+        <button onclick="switchWeek(3)" class="week-btn bg-gray-900 border border-gray-700 text-gray-500 rounded p-2 text-xs font-bold transition-all hover:border-red-500 hover:text-red-400">Həftə 3</button>
+        <button onclick="switchWeek(4)" class="week-btn bg-gray-900 border border-gray-700 text-gray-500 rounded p-2 text-xs font-bold transition-all hover:border-red-500 hover:text-red-400">Həftə 4</button>
     </div>
 
-    <!-- Confirmation Modal (for delete actions) -->
-    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-red-500">
-            <h3 class="text-xl font-bold text-red-400 mb-4" id="confirm-title">Onay Gerekli</h3>
-            <p class="text-gray-300 mb-6" id="confirm-content">Emin misiniz?</p>
-            <div class="flex space-x-4">
-                <button onclick="commitConfirmation(true)"
-                        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg btn-glow">
-                    Evet, Onaylıyorum
-                </button>
-                <button onclick="commitConfirmation(false)"
-                        class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-lg">
-                    İptal
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Password Modal -->
-    <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-blue-500">
-            <h3 class="text-xl font-bold text-blue-400 mb-4">Konum Kilitli</h3>
-            <p class="text-gray-300 mb-4" id="password-modal-name"></p>
-            <input type="password" id="password-modal-input" placeholder="Şifreyi Girin"
-                   class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:ring-blue-500/50 placeholder-gray-500 mb-4">
-            <button onclick="unlockContainerAttempt()"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow">
-                Kilidi Aç
-            </button>
-            <button onclick="closePasswordModal()"
-                    class="w-full mt-2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-lg">
-                İptal
-            </button>
-        </div>
-    </div>
-    
-    <!-- Auth Modal (Sign-In/Sign-Up) -->
-    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 p-8 rounded-xl card-glow max-w-md w-full border border-green-500">
-            <h3 class="text-2xl font-bold text-green-400 mb-4">Kullanıcı Hesabı</h3>
-            <div id="auth-content">
-                <!-- Dynamic content based on auth state will be placed here -->
-            </div>
-            <button onclick="closeAuthModal()"
-                    class="w-full mt-6 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-lg">
-                Kapat
-            </button>
-        </div>
+    <!-- Content Area -->
+    <div id="days-container" class="px-4 space-y-4">
+        <!-- Days will be injected here via JS -->
     </div>
 
-    <!-- Rename Modal -->
-    <div id="rename-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 p-6 rounded-xl card-glow max-w-sm w-full border border-blue-500">
-            <h3 class="text-xl font-bold text-blue-400 mb-4">Konumu Yeniden Adlandır</h3>
-            <input type="text" id="rename-modal-input" placeholder="Yeni Ad"
-                   class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg focus:ring-blue-500/50 placeholder-gray-500 mb-4">
-            <button onclick="commitRename()"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow">
-                Kaydet
-            </button>
-            <button onclick="closeRenameModal()"
-                    class="w-full mt-2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-lg">
-                İptal
-            </button>
-        </div>
+    <!-- Reset Data Button (Red) -->
+    <div class="fixed bottom-4 right-4">
+        <button onclick="resetData()" class="bg-red-900/80 text-red-200 text-xs px-3 py-2 rounded-lg backdrop-blur border border-red-500 shadow-lg">
+            <i class="fas fa-trash-alt mr-1"></i> Sıfırla
+        </button>
     </div>
 
-
-    <script type="module">
-        // --- Firebase Imports ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global Firebase variables
-        let app = null;
-        let db = null;
-        let auth = null;
-        let userId = null;
-        
-        // CRITICAL: Secure usage of global environment variables
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        let isAuthReady = false;
-        let isAnonymous = false;
-        let isFirebaseAvailable = true; 
-
-        // --- Application State ---
-        let containers = [];
-        let activeContainerId = null;
-        let containerToRenameId = null; 
-        let confirmationResolver = null;
-
-        // --- Utility Functions (Modal, Confirmation, ID Generation) ---
-        
-        window.showMessageBox = function(title, content) {
-            document.getElementById('message-title').textContent = title;
-            document.getElementById('message-content').textContent = content;
-            document.getElementById('message-box').classList.remove('hidden');
-            document.getElementById('message-box').classList.add('flex');
-        }
-
-        window.closeMessageBox = function() {
-            document.getElementById('message-box').classList.add('hidden');
-            document.getElementById('message-box').classList.remove('flex');
-        }
-
-        window.showConfirmationBox = function(title, content) {
-            document.getElementById('confirm-title').textContent = title;
-            document.getElementById('confirm-content').textContent = content;
-            document.getElementById('confirmation-modal').classList.remove('hidden');
-            document.getElementById('confirmation-modal').classList.add('flex');
-
-            return new Promise(resolve => {
-                confirmationResolver = resolve;
-            });
-        }
-
-        window.commitConfirmation = function(result) {
-            document.getElementById('confirmation-modal').classList.add('hidden');
-            document.getElementById('confirmation-modal').classList.remove('flex');
-            if (confirmationResolver) {
-                confirmationResolver(result);
-                confirmationResolver = null;
-            }
-        }
-
-        function generateId() {
-            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-                return crypto.randomUUID();
-            }
-            return Date.now().toString(36) + Math.random().toString(36).substring(2);
-        }
-
-        function getContainerById(id) {
-            return containers.find(c => c.id === id);
-        }
-        
-        // --- Data Persistence Logic (FIREBASE ONLY) ---
-        
-        async function updateContainer(container) {
-            if (!isAuthReady || !db || !container.id || !isFirebaseAvailable || !userId) {
-                console.error("Error: Not ready for Firestore or missing userId.");
-                showMessageBox("Hata", "Veri, kimlik doğrulama tamamlanmadığı için kaydedilemedi.");
-                return;
-            }
-
-            // Prepare data for Firestore
-            const { unlocked, id, ...dataToSave } = container;
-
-            try {
-                // Path: /artifacts/{appId}/users/{userId}/muDocContainers/{containerId}
-                const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
-                await setDoc(containerRef, dataToSave, { merge: true });
-            } catch (e) {
-                console.error("Firestore error while updating container:", e);
-                showMessageBox("Hata", "Konum buluta güncellenemedi.");
-            }
-        }
-        
-        function getUserContainersCollection() {
-            // Path: /artifacts/{appId}/users/{userId}/muDocContainers
-            if (!db || !userId || !isFirebaseAvailable) return null;
-            return collection(db, 'artifacts', appId, 'users', userId, 'muDocContainers');
-        }
-
-        let isListenerSetup = false;
-        let unsubscribeContainers = null;
-
-        function setupContainerListener() {
-            if (!isFirebaseAvailable || !userId) {
-                 // Do not attempt to set up listener if Firebase is unavailable or userId is missing
-                 if (unsubscribeContainers) {
-                    unsubscribeContainers();
-                    unsubscribeContainers = null;
-                 }
-                 containers = [];
-                 renderContainersList();
-                 return;
-            }
-
-            if (isListenerSetup && unsubscribeContainers) {
-                unsubscribeContainers(); // Stop the old listener if exists
-            }
-
-            const containersCol = getUserContainersCollection();
-            if (!containersCol) {
-                containers = [];
-                activeContainerId = null;
-                renderContainersList();
-                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
-                isListenerSetup = false;
-                return;
-            }
-
-            // Start new listener
-            unsubscribeContainers = onSnapshot(containersCol, (snapshot) => {
-                const newContainers = [];
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    newContainers.push({
-                        id: doc.id,
-                        ...data,
-                        content: data.content || [],
-                        // unlocked is transient state, not saved to DB
-                        unlocked: data.password ? false : true 
-                    });
-                });
-
-                newContainers.sort((a, b) => a.name.localeCompare(b.name, 'tr', { sensitivity: 'base' }));
-
-                containers = newContainers;
-                renderContainersList();
-
-                if (activeContainerId) {
-                    // Re-select to refresh UI
-                    selectContainer(activeContainerId, false);
+    <script>
+        // DATA: Full 30 Day Schedule (Same as before)
+        const scheduleData = {
+            1: [
+                {
+                    day: 1,
+                    title: "Təməl: Natural Ədədlər & Shadowing Giriş",
+                    math: "Mövzu: Natural ədədlər, Toplama-Çıxma-Vurma sürəti.<br>Tapşırıq: 40 test (sadə hesablamalar). Səhvsiz olmalı.",
+                    eng: "Mövzu: SHADOWING (Kölgə) Texnikası.<br>Tapşırıq: Youtube-da 'Learn English with TV Series' kanalından 3 dəqiqəlik video aç. Hər cümləni dayandır və eyni səslə təkrar et. 20 dəfə təkrarla.",
+                    extra: "Axşam: 10 yeni fel (Verb) öyrən və dəftərə yaz."
+                },
+                {
+                    day: 2,
+                    title: "Adi Kəsrlər & Qulaq Asma",
+                    math: "Mövzu: Adi kəsrlər (Düzgün, Düzgün olmayan).<br>Tapşırıq: Ortaq məxrəcə gətirmə üzrə 30 test. Kəsrlərin ixtisarı.",
+                    eng: "Mövzu: Passive Listening (Passiv Dinləmə).<br>Tapşırıq: Yolda/İşdə '6 Minute English' (BBC) podkastına qulaq as. Başa düşməsən də dayandırma.",
+                    extra: "Axşam: Günü ingiliscə 3 cümlə ilə yekunlaşdır."
+                },
+                {
+                    day: 3,
+                    title: "Onluq Kəsrlər & Günlük Yazmaq",
+                    math: "Mövzu: Vergüllü ədədlər (Toplama, çıxma).<br>Tapşırıq: Market qəbzi kimi hesablamalar apar. 30 test həll et.",
+                    eng: "Mövzu: Writing (Yazı).<br>Tapşırıq: 'Dünən nə etdim?' mövzusunda sadə keçmiş zamanda (Past Simple) 5 cümlə yaz. Google Translate-də yoxla.",
+                    extra: "Axşam: Səhvlərini analiz et."
+                },
+                {
+                    day: 4,
+                    title: "Faiz və Nisbət & Güzgü Texnikası",
+                    math: "Mövzu: Ədədin faizini tapmaq. Tənasüb qurmaq.<br>Tapşırıq: Məsələ həlli (Mağaza endirimləri tipli məsələlər).",
+                    eng: "Mövzu: Speaking (Özünlə).<br>Tapşırıq: Güzgü qarşısına keç. 2 dəqiqə özünü təqdim et (Adın, yaşın, hobbin). Dayanmaq olmaz.",
+                    extra: "Axşam: Shadowing davam edir (yeni video)."
+                },
+                {
+                    day: 5,
+                    title: "Sadə Tənliklər & Film Gecəsi",
+                    math: "Mövzu: X-i tapmaq. Mötərizələri açmaq.<br>Tapşırıq: 2(x+3)=10 tipli 40 tənlik həll et.",
+                    eng: "Mövzu: Əyləncəli öyrənmə.<br>Tapşırıq: İngilis dilində sevdiyin bir cizgi filmini (sadə dil olur) İngilis altyazısı ilə izlə.",
+                    extra: "Axşam: Filmdən 5 yeni söz çıxar."
+                },
+                {
+                    day: 6,
+                    title: "Həftəlik Təkrar (Riyaziyyat) & Hekayə",
+                    math: "Mövzu: İlk 5 günün qarışıq təkrarı.<br>Tapşırıq: Səhv etdiyin testlərə yenidən bax.",
+                    eng: "Mövzu: Vocabulary Story.<br>Tapşırıq: Bu həftə öyrəndiyin 20 sözdən istifadə edərək mənasız da olsa bir hekayə yaz.",
+                    extra: "Axşam: Sərbəst vaxt (İngiliscə musiqi dinlə)."
+                },
+                {
+                    day: 7,
+                    title: "BAZAR GÜNÜ: Tam Sınaq",
+                    math: "Tapşırıq: Özünə 20 suallıq sınaq hazırla və zamanla yarış (30 dəqiqə).",
+                    eng: "Tapşırıq: Öz səsini telefona yaz. 'My next week plans' (Gələn həftə planlarım) haqqında danış. Qulaq as və səhvlərini tap.",
+                    extra: "Plan: Növbəti həftənin cədvəlinə bax."
                 }
+            ],
+            2: [
+                {
+                    day: 8,
+                    title: "Çoxhədli & Təsvir Etmə",
+                    math: "Mövzu: Müxtəsər Vurma Düsturları (a+b)².<br>Tapşırıq: Düsturları əzbərlə və 30 misal həll et.",
+                    eng: "Mövzu: Speaking (Description).<br>Tapşırıq: Otağındakı əşyaları ingiliscə təsvir et (rəngi, forması, yeri).",
+                    extra: "Axşam: Shadowing (Sürəti artır)."
+                },
+                {
+                    day: 9,
+                    title: "Kvadrat Köklər & Sual Vermək",
+                    math: "Mövzu: Kökaltı ifadələr.<br>Tapşırıq: Kökləri hesablamaq üzrə 40 test.",
+                    eng: "Mövzu: Grammar (Questions).<br>Tapşırıq: Özünə 20 sual hazırla (What, Where, When, How) və cavabla.",
+                    extra: "Axşam: Podkast dinlə."
+                },
+                {
+                    day: 10,
+                    title: "Kvadrat Tənliklər & Oxu",
+                    math: "Mövzu: Diskriminant (D=b²-4ac).<br>Tapşırıq: Tənliklərin köklərini tapmaq.",
+                    eng: "Mövzu: Reading.<br>Tapşırıq: 'News in Levels' saytından Level 2 xəbər oxu və ucadan təkrarla.",
+                    extra: "Axşam: Yeni sözləri lüğətə yaz."
+                },
+                {
+                    day: 11,
+                    title: "Bərabərsizliklər & Debat",
+                    math: "Mövzu: Böyükdür (>), Kiçikdir (<).<br>Tapşırıq: İnterval üsulu ilə həllər.",
+                    eng: "Mövzu: Speaking (Opinion).<br>Tapşırıq: 'Social Media is good or bad?' mövzusunda öz fikrini 3 dəqiqə izah et.",
+                    extra: "Axşam: Shadowing (TED Talks)."
+                },
+                {
+                    day: 12,
+                    title: "Sistem Tənliklər & Dialoq",
+                    math: "Mövzu: İki dəyişənli tənliklər sistemi.<br>Tapşırıq: Əvəzetmə və toplama üsulu.",
+                    eng: "Mövzu: Dialogue Simulation.<br>Tapşırıq: Restoranda yemək sifarişi verən müştəri və ofisiantın dialoqunu tək oyna.",
+                    extra: "Axşam: İngilis dilində qısa hekayə oxu."
+                },
+                {
+                    day: 13,
+                    title: "Cəbr Yekun & Altyazısız İzləmə",
+                    math: "Mövzu: 50 suallıq qarışıq test.",
+                    eng: "Mövzu: Listening Challenge.<br>Tapşırıq: 5 dəqiqəlik videoya altyazısız bax. Nə başa düşdünsə qeyd et.",
+                    extra: "Axşam: Səhvlərin analizi."
+                },
+                {
+                    day: 14,
+                    title: "SINAQ GÜNÜ (Cəbr & Speaking)",
+                    math: "Tapşırıq: Özünü yoxla (DİM toplu və ya online sınaq).",
+                    eng: "Tapşırıq: 'My Dream Job' mövzusunda video çək (5 dəqiqə).",
+                    extra: "İstirahət."
+                }
+            ],
+            3: [
+                { day: 15, title: "Funksiyalar Giriş", math: "Mövzu: y=kx+b. Qrafik qurma.", eng: "Speaking: Şəkil təsviri.", extra: "..." },
+                { day: 16, title: "Funksiya Qrafikləri", math: "Mövzu: Koordinat sistemi. Nöqtələri tapmaq.", eng: "Listening: CNN News (1 xəbər).", extra: "..." },
+                { day: 17, title: "Kvadratik Funksiya", math: "Mövzu: Parabola. Təpə nöqtəsi.", eng: "Writing: Gələcək məktub.", extra: "..." },
+                { day: 18, title: "Ehtimal Nəzəriyyəsi", math: "Mövzu: Sadə ehtimal məsələləri.", eng: "Speaking: 'If I were rich...' (Şərt budaq cümlələri).", extra: "..." },
+                { day: 19, title: "Statistika", math: "Mövzu: Diaqramlar, Moda, Median.", eng: "Shadowing: Çətin səviyyə.", extra: "..." },
+                { day: 20, title: "Təkrar (Funksiyalar)", math: "Mövzu: Qrafikləri oxumaq.", eng: "Movie: Filmi fasilələrlə izlə, ifadələri yaz.", extra: "..." },
+                { day: 21, title: "Həftəlik Sınaq", math: "Sınaq: Funksiyalar.", eng: "Sınaq: B1 online test et.", extra: "..." },
+            ],
+            4: [
+                { day: 22, title: "Həndəsə: Bucaqlar", math: "Mövzu: Qonşu və qarşılıqlı bucaqlar.", eng: "Speaking: Real mövzu (Politics/Sport).", extra: "..." },
+                { day: 23, title: "Üçbucaqlar 1", math: "Mövzu: Üçbucaq bərabərsizliyi, Tənbölən.", eng: "Listening: Audio kitab (1 fəsil).", extra: "..." },
+                { day: 24, title: "Üçbucaqlar 2", math: "Mövzu: Pifaqor teoremi (Ən vacib).", eng: "Thinking: Bütün günü ingiliscə düşünməyə çalış.", extra: "..." },
+                { day: 25, title: "Dördbucaqlılar", math: "Mövzu: Kvadrat, düzbucaqlı sahəsi.", eng: "Writing: Review (Oxuduğun kitaba rəy yaz).", extra: "..." },
+                { day: 26, title: "Çevrə və Dairə", math: "Mövzu: Radius, Diametr, Uzunluq.", eng: "Speaking: 15 dəqiqə non-stop danış.", extra: "..." },
+                { day: 27, title: "Həndəsə Yekun", math: "Mövzu: Sahə məsələləri.", eng: "Shadowing: Final məşq.", extra: "..." },
+                { day: 28, title: "Ümumi Təkrar (Riyaziyyat)", math: "Bütün 30 günün xülasəsi.", eng: "Ümumi təkrar (Lüğət).", extra: "..." },
+                { day: 29, title: "Sərbəst Gün", math: "Beynini dincəlt.", eng: "Yalnız ingiliscə kontent izlə.", extra: "..." },
+                { day: 30, title: "FİNAL SINAQ", math: "Mövzu: Buraxılış imtahanı səviyyəsində sınaq.", eng: "Mövzu: B1 Tam Sınaq (Listening/Reading/Grammar).", extra: "Təbriklər! Mənə yaz." }
+            ]
+        };
 
-            }, (error) => {
-                console.error("Firestore Listening Error:", error);
-                if (error.code !== 'permission-denied') {
-                    showMessageBox("Hata", "Veritabanı bağlantısı kesildi veya bir hata oluştu.");
+        let currentWeek = 1;
+        
+        // Load progress from localStorage
+        let progress = JSON.parse(localStorage.getItem('studyProgress')) || {};
+
+        function init() {
+            renderWeek(1);
+            updateProgress();
+        }
+
+        function switchWeek(week) {
+            currentWeek = week;
+            document.querySelectorAll('.week-btn').forEach((btn, index) => {
+                // Change classes for Red theme
+                if (index + 1 === week) {
+                    btn.classList.add('bg-red-900/30', 'text-red-400', 'border-red-500', 'active-week');
+                    btn.classList.remove('bg-gray-900', 'text-gray-500', 'border-gray-700');
+                } else {
+                    btn.classList.remove('bg-red-900/30', 'text-red-400', 'border-red-500', 'active-week');
+                    btn.classList.add('bg-gray-900', 'text-gray-500', 'border-gray-700');
                 }
             });
-            isListenerSetup = true;
+            renderWeek(week);
         }
 
+        function toggleDay(id) {
+            const content = document.getElementById(`content-${id}`);
+            const icon = document.getElementById(`icon-${id}`);
+            const allContents = document.querySelectorAll('.accordion-content');
+            const allIcons = document.querySelectorAll('.fa-chevron-down');
 
-        // --- Auth & Initialization ---
+            // Close others
+            allContents.forEach(c => {
+                if (c.id !== `content-${id}`) {
+                    c.classList.remove('active');
+                    c.style.maxHeight = null;
+                }
+            });
+            allIcons.forEach(i => {
+                if (i.id !== `icon-${id}`) {
+                    i.style.transform = 'rotate(0deg)';
+                }
+            });
 
-        function updateAuthUI() {
-            const authStatusText = document.getElementById('auth-status-text');
-            const userIdDisplay = document.getElementById('user-id-display');
-            const authButton = document.getElementById('auth-button');
-
-            if (!isFirebaseAvailable) {
-                authStatusText.textContent = 'VERİTABANI KAPALI';
-                authStatusText.classList.remove('text-green-400');
-                authStatusText.classList.add('text-red-400');
-                userIdDisplay.textContent = 'YOK (HATA)';
-                authButton.disabled = true;
-                return;
-            }
-
-            if (userId) {
-                userIdDisplay.textContent = userId;
+            // Toggle current
+            content.classList.toggle('active');
+            if (content.classList.contains('active')) {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.style.transform = 'rotate(180deg)';
             } else {
-                 userIdDisplay.textContent = 'Oturum Yok';
+                content.style.maxHeight = null;
+                icon.style.transform = 'rotate(0deg)';
             }
+        }
 
-            if (isAnonymous) {
-                authStatusText.textContent = 'Anonim Oturum';
-                authStatusText.classList.remove('text-green-400', 'text-red-400');
-            } else if (userId && auth.currentUser && auth.currentUser.email) {
-                authStatusText.textContent = `Giriş Yapıldı (${auth.currentUser.email})`;
-                authStatusText.classList.add('text-green-400');
-                authStatusText.classList.remove('text-red-400');
+        function toggleTask(day, type) {
+            const key = `d${day}_${type}`;
+            if (progress[key]) {
+                delete progress[key];
             } else {
-                 authStatusText.textContent = 'Hesap';
-                 authStatusText.classList.remove('text-green-400', 'text-red-400');
+                progress[key] = true;
             }
+            localStorage.setItem('studyProgress', JSON.stringify(progress));
+            updateProgress();
         }
 
-        // Utility to hide loading screen and show main content
-        function finalizeUILoad() {
-            document.getElementById('loading-overlay').classList.add('hidden');
-            document.getElementById('main-app-content').classList.remove('hidden');
-            updateAuthUI();
-            if (!isFirebaseAvailable) {
-                 showMessageBox("Kritik Hata", "Firebase yapılandırması alınamadı. Uygulama çalıştırıldı ancak veri işlemleri devre dışı.");
-            }
-        }
-
-        async function initFirebase() {
-            const loadingStatus = document.getElementById('loading-status');
+        function updateProgress() {
+            const totalTasks = 30 * 2; // 30 days * 2 main tasks (simplified for progress bar)
+            const completedTasks = Object.keys(progress).length;
+            const percent = Math.min(100, Math.round((completedTasks / totalTasks) * 100));
             
-            // 1. Get Config Securely from Environment
-            let firebaseConfig = null;
-            try {
-                loadingStatus.textContent = "Yapılandırma alınıyor...";
-                const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-                
-                if (configString) {
-                    firebaseConfig = JSON.parse(configString);
-                }
-                
-                if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-                    throw new Error("Boş veya geçersiz Firebase yapılandırması.");
-                }
-                
-                // If successful, proceed with Firebase init
-                setLogLevel('debug'); 
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                loadingStatus.textContent = "Oturum açılıyor...";
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            document.getElementById('progress-text').innerText = `${percent}%`;
+        }
 
-                // 2. Force initial sign-in/token exchange right away if no current user
-                if (!auth.currentUser) {
-                    try {
-                        if (initialAuthToken) {
-                            // Attempt token sign-in, fallback to anonymous
-                            await signInWithCustomToken(auth, initialAuthToken).catch(e => {
-                                console.warn("Custom token failed, falling back to anonymous.", e);
-                                return signInAnonymously(auth);
-                            });
-                        } else {
-                            // If no token, sign in anonymously
-                            await signInAnonymously(auth);
-                        }
-                    } catch (e) {
-                         // A secondary failure point in the auth flow (e.g., auth service unavailable)
-                        console.error("Kritik Oturum Açma Hatası:", e);
-                        isFirebaseAvailable = false;
-                    }
-                }
+        function resetData() {
+            if(confirm("Bütün tərəqqini silmək istədiyinə əminsən?")) {
+                localStorage.removeItem('studyProgress');
+                progress = {};
+                updateProgress();
+                renderWeek(currentWeek);
+            }
+        }
+
+        function renderWeek(week) {
+            const container = document.getElementById('days-container');
+            container.innerHTML = '';
+            
+            const days = scheduleData[week];
+            
+            days.forEach(data => {
+                const isMathDone = progress[`d${data.day}_math`] ? 'checked' : '';
+                const isEngDone = progress[`d${data.day}_eng`] ? 'checked' : '';
+
                 
-                // 3. Set up Auth State Listener
-                if (auth) {
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            userId = user.uid;
-                            isAnonymous = user.isAnonymous;
-                            setupContainerListener();
-                            loadingStatus.textContent = `Oturum ${userId} ile açıldı. Veriler bekleniyor...`;
-                        } else {
-                            userId = null; 
-                            isAnonymous = false;
-                            setupContainerListener(); 
-                            loadingStatus.textContent = "Oturum Kapatıldı.";
-                            
-                            // Immediately force anonymous sign in if user logs out or is null initially
-                            if (auth && !auth.currentUser) {
-                                signInAnonymously(auth).catch(err => console.error("Anonim oturum açma hatası:", err));
-                            }
-                        }
+                const html = `
+                    <div class="bg-panel rounded-xl border border-gray-800 overflow-hidden shadow-lg transition-all hover:border-red-900">
+                        <div onclick="toggleDay(${data.day})" class="p-4 flex justify-between items-center cursor-pointer bg-gradient-to-r from-gray-900 to-black">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-red-500/30 text-red-500 font-bold font-mono text-lg shadow-[0_0_10px_rgba(255,65,54,0.1)]">
+                                    ${data.day}
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-gray-200 text-sm md:text-base">${data.title}</h3>
+                                </div>
+                            </div>
+                            <i id="icon-${data.day}" class="fas fa-chevron-down text-gray-500 transition-transform duration-300"></i>
+                        </div>
                         
-                        // Finalize UI load only on the first run of the listener
-                        if (!isAuthReady) {
-                            isAuthReady = true;
-                            finalizeUILoad();
-                        }
-                        updateAuthUI();
-                    });
-                }
+                        <div id="content-${data.day}" class="accordion-content bg-black/50">
+                            <div class="p-4 space-y-4 border-t border-gray-800">
+                                
+                                <!-- Math Section (Yellow/Orange border for contrast) -->
+                                <div class="relative pl-4 border-l-2 border-orange-500/50">
+                                    <h4 class="text-orange-400 text-xs font-bold uppercase mb-1 tracking-wider"><i class="fas fa-calculator mr-1"></i> Riyaziyyat (Səhər)</h4>
+                                    <p class="text-gray-400 text-sm mb-2 leading-relaxed">${data.math}</p>
+                                    <label class="flex items-center space-x-2 cursor-pointer mt-2 group">
+                                        <input type="checkbox" class="check-custom" onclick="toggleTask(${data.day}, 'math')" ${isMathDone}>
+                                        <span class="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">Tamamladım</span>
+                                    </label>
+                                </div>
 
+                                <!-- English Section (Cyan/Blue border for contrast) -->
+                                <div class="relative pl-4 border-l-2 border-cyan-500/50">
+                                    <h4 class="text-cyan-400 text-xs font-bold uppercase mb-1 tracking-wider"><i class="fas fa-language mr-1"></i> İngiliscə (Gündüz)</h4>
+                                    <p class="text-gray-400 text-sm mb-2 leading-relaxed">${data.eng}</p>
+                                    <label class="flex items-center space-x-2 cursor-pointer mt-2 group">
+                                        <input type="checkbox" class="check-custom" onclick="toggleTask(${data.day}, 'eng')" ${isEngDone}>
+                                        <span class="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">Tamamladım</span>
+                                    </label>
+                                </div>
 
-            } catch (e) {
-                // --- CRITICAL FAILURE HANDLING (Config/Init Failure) ---
-                console.error("Kritik: Firebase Initialization or Config Failed:", e);
-                isFirebaseAvailable = false;
-                userId = 'YOK (HATA)'; // Ensure the ID display shows the failure state
-                loadingStatus.textContent = "HATA: Yapılandırma başarısız. Veri işlemleri devre dışı.";
-            }
-            
-            // --- CRITICAL FIX: Ensure UI loads even if onAuthStateChanged fails to fire ---
-            // If isAuthReady is still false after the async auth attempts, force the UI to load.
-            if (!isAuthReady) {
-                isAuthReady = true;
-                if (isFirebaseAvailable && !userId) {
-                    // Firebase is active but waiting for auth signal (a rare state)
-                    userId = 'AUTH BEKLENİYOR'; 
-                }
-                setTimeout(() => finalizeUILoad(), 500); // Give the auth listener a small chance to fire first
-            }
-        }
+                                <!-- Extra Section (Dark Red accent) -->
+                                <div class="bg-red-900/10 p-3 rounded border border-red-900/30">
+                                    <h4 class="text-red-500 text-xs font-bold uppercase mb-1"><i class="fas fa-moon mr-1"></i> Axşam Rutini</h4>
+                                    <p class="text-gray-400 text-xs italic">${data.extra}</p>
+                                </div>
 
-        // --- Authentication Modal Logic (Same as V8) ---
-        
-        window.openAuthModal = function() {
-            if (!isFirebaseAvailable) {
-                showMessageBox("Hata", "Firebase başlatılamadı. Oturum işlemleri devre dışı.");
-                return;
-            }
-            renderAuthContent();
-            document.getElementById('auth-modal').classList.remove('hidden');
-            document.getElementById('auth-modal').classList.add('flex');
-        }
-
-        window.closeAuthModal = function() {
-            document.getElementById('auth-modal').classList.add('hidden');
-            document.getElementById('auth-modal').classList.remove('flex');
-        }
-
-        function renderAuthContent() {
-             const contentDiv = document.getElementById('auth-content');
-            
-            if (auth.currentUser && auth.currentUser.email) {
-                contentDiv.innerHTML = `
-                    <p class="text-gray-300 mb-4">Şu an kalıcı bir hesapla giriş yapmış durumdasınız.</p>
-                    <p class="text-lg font-semibold text-green-400 mb-6">E-posta: ${auth.currentUser.email}</p>
-                    <button onclick="handleSignOut()"
-                            class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg btn-glow">
-                        Çıkış Yap
-                    </button>
-                `;
-            } else if (auth.currentUser && auth.currentUser.isAnonymous) {
-                contentDiv.innerHTML = `
-                    <p class="text-gray-300 mb-4">Şu an anonim bir oturumdasınız. Kalıcı bir hesap oluşturmak için aşağıdaki formu kullanın.</p>
-                    <p class="text-sm text-yellow-400 mb-4">Mevcut anonim verileriniz, kalıcı hesaba geçiş yaptıktan sonra bu oturum ID'si ile ilişkilendirilecektir.</p>
-                    <hr class="border-gray-700 my-4">
-
-                    <input type="email" id="auth-email" placeholder="E-posta Adresi"
-                           class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-3 focus:ring-blue-500/50 placeholder-gray-500">
-                    <input type="password" id="auth-password" placeholder="Şifre (min 6 karakter)"
-                           class="w-full p-3 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-4 focus:ring-blue-500/50 placeholder-gray-500">
-                    
-                    <button onclick="handleSignIn()"
-                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg btn-glow mb-3">
-                        Giriş Yap
-                    </button>
-                    <button onclick="handleSignUp()"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg btn-glow">
-                        Yeni Hesap Oluştur
-                    </button>
-                `;
-            } else {
-                 contentDiv.innerHTML = `<p class="text-gray-400">Kimlik doğrulama durumu yükleniyor...</p>`;
-            }
-        }
-
-        window.handleSignUp = async function() {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            
-            if (!email || !password) {
-                showMessageBox("Uyarı", "Lütfen e-posta ve şifrenizi girin.");
-                return;
-            }
-
-            try {
-                // IMPORTANT: Create user. Firebase automatically handles linking if user is anonymous.
-                await createUserWithEmailAndPassword(auth, email, password); 
-                closeAuthModal();
-                showMessageBox("Başarılı", `Hoş geldiniz, ${email}! Hesabınız başarıyla oluşturuldu ve anonim verileriniz kalıcı hale getirildi.`);
-            } catch (error) {
-                console.error("Kayıt Hatası:", error);
-                let message = "Kayıt olurken bir hata oluştu.";
-                if (error.code === 'auth/weak-password') {
-                    message = "Şifre 6 karakterden uzun olmalıdır.";
-                } else if (error.code === 'auth/email-already-in-use') {
-                    message = "Bu e-posta adresi zaten kullanılıyor. Lütfen giriş yapın.";
-                } else if (error.code === 'auth/invalid-email') {
-                    message = "Geçersiz e-posta formatı.";
-                }
-                showMessageBox("Hata", message);
-            }
-        }
-
-        window.handleSignIn = async function() {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-
-             if (!email || !password) {
-                showMessageBox("Uyarı", "Lütfen e-posta ve şifrenizi girin.");
-                return;
-            }
-
-            try {
-                // Sign in with email/password. This handles the anonymous session upgrade automatically
-                await signInWithEmailAndPassword(auth, email, password);
-                closeAuthModal();
-                showMessageBox("Başarılı", `Tekrar hoş geldiniz, ${email}! Giriş yapıldı.`);
-            } catch (error) {
-                console.error("Giriş Hatası:", error);
-                let message = "Giriş yapılırken bir hata oluştu.";
-                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
-                    message = "Geçersiz kimlik bilgileri veya kullanıcı bulunamadı.";
-                }
-                showMessageBox("Hata", message);
-            }
-        }
-
-        window.handleSignOut = async function() {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            const confirmed = await showConfirmationBox("Çıkış Yap", "Oturumu kapatmak istediğinizden emin misiniz? Tüm oturum verileri kaybolacaktır. Kayıtlı hesap verileriniz etkilenmez.");
-            if (confirmed) {
-                try {
-                    await signOut(auth);
-                    // After sign out, the onAuthStateChanged listener will detect user=null
-                    // and the init logic will force an anonymous sign-in immediately after.
-                    closeAuthModal();
-                    showMessageBox("Başarılı", "Başarıyla çıkış yapıldı. Yeni anonim oturuma geçiliyor...");
-                } catch (error) {
-                    console.error("Çıkış Hatası:", error);
-                    showMessageBox("Hata", "Çıkış yapılırken bir hata oluştu.");
-                }
-            }
-        }
-
-
-        // --- Container UI and Actions (All check isFirebaseAvailable) ---
-        
-        function renderContainersList() {
-            const listContainer = document.getElementById('containers-list');
-            listContainer.innerHTML = ''; 
-
-            if (!isFirebaseAvailable) {
-                listContainer.innerHTML = `<p class="text-center py-4 text-red-500 text-sm">Veritabanı Hatası. Konumlar yüklenemiyor.</p>`;
-                return;
-            }
-
-            if (containers.length === 0) {
-                listContainer.innerHTML = `
-                    <p class="text-center py-4 text-gray-500 text-sm" id="no-containers-message">
-                        ${!isAuthReady ? 'Yükleniyor...' : 'Henüz hiç konum oluşturulmadı.'}
-                    </p>
-                `;
-                return;
-            }
-
-            containers.forEach(container => {
-                const isActive = container.id === activeContainerId;
-                const isLocked = container.password && !container.unlocked; 
-
-                const itemDiv = document.createElement('div');
-                itemDiv.id = `container-${container.id}`;
-                itemDiv.className = `container-item p-3 rounded-lg cursor-pointer flex justify-between items-center ${isActive ? 'active' : 'bg-gray-900 hover:bg-gray-700/50'}`;
-                itemDiv.onclick = () => selectContainer(container.id, true);
-                
-                const itemCount = container.content ? container.content.length : 0;
-                
-                itemDiv.innerHTML = `
-                    <span class="flex items-center truncate">
-                        ${isLocked ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 1010 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>'}
-                        <span class="truncate">${container.name}</span>
-                    </span>
-                    <span class="text-xs text-gray-400 ml-2">${itemCount} öğe</span>
-                `;
-
-                listContainer.appendChild(itemDiv);
-            });
-        }
-        
-        window.createContainer = async function() {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            if (!isAuthReady || !userId) {
-                showMessageBox("Uyarı", "Lütfen oturumun yüklenmesini bekleyin ve Kullanıcı ID'sinin görünür olduğundan emin olun.");
-                return;
-            }
-            
-            const nameInput = document.getElementById('new-container-name');
-            const passwordInput = document.getElementById('new-container-password');
-            const name = nameInput.value.trim();
-            const password = passwordInput.value.trim();
-
-            if (!name) {
-                showMessageBox("Uyarı", "Lütfen bir konum adı girin.");
-                return;
-            }
-
-            const newContainerData = {
-                id: generateId(), 
-                name: name,
-                password: password,
-                content: [],
-                unlocked: password ? false : true 
-            };
-
-            // FIREBASE: Add document
-            try {
-                const containersCol = getUserContainersCollection();
-                if (!containersCol) throw new Error("Koleksiyon referansı alınamadı.");
-
-                const { unlocked, ...dataToSave } = newContainerData;
-                const docRef = await addDoc(containersCol, dataToSave);
-                
-                showMessageBox("Başarılı", "Yeni konum buluta oluşturuldu.");
-                activeContainerId = docRef.id;
-
-            } catch (e) {
-                console.error("Konum oluşturulurken Firestore hatası:", e);
-                showMessageBox("Hata", "Yeni konum oluşturulamadı. Veritabanı hatası.");
-            }
-            
-            nameInput.value = '';
-            passwordInput.value = '';
-            selectContainer(activeContainerId, false);
-        }
-        
-        function selectContainer(id, shouldCheckLock = true) {
-            activeContainerId = id;
-            const container = getContainerById(id);
-            if (!container) return;
-
-            renderContainersList();
-
-            if (container.password && !container.unlocked && shouldCheckLock) {
-                showPasswordModal(container.name);
-            } else {
-                renderContainerContent(container);
-            }
-        }
-
-        window.deleteContainer = async function(id) {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            const confirmed = await showConfirmationBox("Konumu Sil", "Bu konumu ve içindeki TÜM içeriği kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.");
-
-            if (confirmed) {
-                try {
-                    const containerRef = doc(db, 'artifacts', appId, 'users', userId, 'muDocContainers', id);
-                    await deleteDoc(containerRef);
-                    showMessageBox("Başarılı", "Konum buluttan silindi.");
-                } catch (e) {
-                    console.error("Konum silinirken Firestore hatası:", e);
-                    showMessageBox("Hata", "Konum silinemedi. Silme işlemi sırasında bir veritabanı hatası oluştu.");
-                }
-                
-                activeContainerId = null;
-                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
-            }
-        }
-        
-        window.unlockContainerAttempt = function() {
-            const passwordInput = document.getElementById('password-modal-input').value;
-            const container = getContainerById(activeContainerId);
-
-            if (!container) {
-                closePasswordModal();
-                return;
-            }
-
-            if (container.password === passwordInput) {
-                container.unlocked = true;
-                closePasswordModal();
-                renderContainerContent(container);
-                renderContainersList(); 
-            } else {
-                showMessageBox("Hata", "Yanlış şifre! Lütfen tekrar deneyin.");
-                document.getElementById('password-modal-input').value = '';
-            }
-        }
-        
-        window.showPasswordModal = function(containerName) {
-            document.getElementById('password-modal-name').textContent = `Konumu açmak için şifreyi girin: ${containerName}`;
-            document.getElementById('password-modal-input').value = '';
-            document.getElementById('password-modal').classList.remove('hidden');
-            document.getElementById('password-modal').classList.add('flex');
-            document.getElementById('welcome-message').style.display = 'none'; 
-            document.getElementById('content-area').innerHTML = ''; 
-        }
-
-        window.closePasswordModal = function() {
-            document.getElementById('password-modal').classList.add('hidden');
-            document.getElementById('password-modal').classList.remove('flex');
-            activeContainerId = null; 
-            renderContainersList();
-            document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML; 
-        }
-
-        window.openRenameModal = function(id) {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            const container = getContainerById(id);
-            if (!container) return;
-
-            containerToRenameId = id;
-            document.getElementById('rename-modal-input').value = container.name;
-            document.getElementById('rename-modal').classList.remove('hidden');
-            document.getElementById('rename-modal').classList.add('flex');
-        }
-
-        window.closeRenameModal = function() {
-            document.getElementById('rename-modal').classList.add('hidden');
-            document.getElementById('rename-modal').classList.remove('flex');
-            containerToRenameId = null;
-        }
-
-        window.commitRename = async function() {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            const newName = document.getElementById('rename-modal-input').value.trim();
-            const container = getContainerById(containerToRenameId);
-
-            if (!newName) {
-                showMessageBox("Uyarı", "Lütfen geçerli bir ad girin.");
-                return;
-            }
-
-            if (container) {
-                container.name = newName;
-                await updateContainer(container); 
-                closeRenameModal();
-            }
-        }
-
-        function renderContainerContent(container) {
-            const contentArea = document.getElementById('content-area');
-
-            const headerHtml = `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-6 border-blue-500/50">
-                    <h2 class="text-4xl font-extrabold text-blue-400 neon-glow mb-2 sm:mb-0 truncate">${container.name}</h2>
-                    <div class="flex space-x-3 mt-2 sm:mt-0">
-                        <button onclick="openRenameModal('${container.id}')"
-                                class="bg-gray-700 hover:bg-gray-600 text-gray-200 py-1 px-3 rounded-md text-sm btn-glow">
-                            Ad Değiştir
-                        </button>
-                        <button onclick="lockContainer('${container.id}')" ${container.password ? '' : 'disabled title="Şifre yok"'}
-                                class="bg-blue-700/50 hover:bg-blue-600/70 text-white py-1 px-3 rounded-md text-sm btn-glow disabled:opacity-50 disabled:cursor-not-allowed">
-                            Kilitle
-                        </button>
-                        <button onclick="deleteContainer('${container.id}')"
-                                class="bg-red-700/50 hover:bg-red-600/70 text-white py-1 px-3 rounded-md text-sm btn-glow">
-                            Konumu Sil
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Add Note/File Forms -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <!-- Add Note -->
-                    <div class="p-4 bg-gray-900 rounded-lg border border-blue-500/30">
-                        <h3 class="text-xl font-bold text-gray-200 mb-3">Yeni Not Ekle</h3>
-                        <input type="text" id="note-title" placeholder="Not Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg mb-2 text-sm focus:ring-blue-500/50">
-                        <textarea id="note-content" rows="4" placeholder="Not içeriği..." class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg resize-none mb-2 text-sm focus:ring-blue-500/50"></textarea>
-                        <button onclick="addNoteToContainer('${container.id}')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow text-sm">
-                            Notu Kaydet
-                        </button>
-                    </div>
-
-                    <!-- Add File/Image -->
-                    <div class="p-4 bg-gray-900 rounded-lg border border-blue-500/30">
-                        <h3 class="text-xl font-bold text-gray-200 mb-3">Dosya/Fotoğraf Yükle (Max 5MB)</h3>
-                        <p class="text-xs text-red-400 mb-3">UYARI: Veriler Base64 olarak DB'ye kaydedilir. Büyük dosyalar performansı düşürür.</p>
-                        <input type="file" id="file-input-${container.id}" 
-                               class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        <input type="text" id="file-title-${container.id}" placeholder="Dosya Başlığı" class="w-full p-2 bg-gray-700 border border-gray-600 text-gray-200 rounded-lg my-2 text-sm focus:ring-blue-500/50">
-                        <button onclick="handleFileUpload('${container.id}')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg btn-glow text-sm mt-2">
-                            Yükle ve Kaydet
-                        </button>
-                    </div>
-                </div>
-
-                <h3 class="text-2xl font-bold text-gray-300 mb-4">İçerikler (${container.content.length})</h3>
-                <div id="container-content-list" class="space-y-4 min-h-[200px]">
-                    <!-- Items list will be injected here -->
-                </div>
-            `;
-            
-            contentArea.innerHTML = headerHtml;
-            renderContentItems(container);
-        }
-
-        window.lockContainer = function(id) {
-            const container = getContainerById(id);
-            if (container && container.password) {
-                container.unlocked = false;
-                activeContainerId = null;
-                renderContainersList();
-                document.getElementById('content-area').innerHTML = document.getElementById('welcome-message').outerHTML;
-            } else if (container && !container.password) {
-                showMessageBox("Uyarı", "Bu konumda şifre ayarlanmamış. Kilitleme işlemi sadece şifre varsa çalışır.");
-            }
-        }
-
-        function renderContentItems(container) {
-             const list = document.getElementById('container-content-list');
-            list.innerHTML = '';
-
-            if (container.content.length === 0) {
-                list.innerHTML = `<p class="text-center py-10 text-gray-500">Bu konumda henüz hiç dosya veya not yok.</p>`;
-                return;
-            }
-             container.content.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(item => {
-                const itemDiv = document.createElement('div');
-                let contentHtml = '';
-                let icon = '';
-                let bgColor = 'bg-gray-900';
-                
-                if (item.type === 'note') {
-                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-4.243 4.243a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414L8 10l-.257-1.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg>`;
-                    contentHtml = `<p class="text-sm text-gray-400 mt-1 whitespace-pre-wrap">${item.data.substring(0, 150)}${item.data.length > 150 ? '...' : ''}</p>`;
-                    bgColor = 'bg-gray-900/70';
-                } else if (item.type === 'image') {
-                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>`;
-                    contentHtml = `<img src="${item.data}" alt="${item.title}" class="max-h-24 w-auto rounded-md mt-2 border border-gray-600"/>`;
-                    bgColor = 'bg-gray-900/50';
-                } else if (item.type === 'file') {
-                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-400 flex-shrink-0 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7z" /><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>`;
-                    contentHtml = `<a href="${item.data}" download="${item.title}" class="text-blue-400 hover:text-blue-300 text-sm underline mt-1 block">Dosyayı İndir (${item.mimeType ? item.mimeType.split('/')[1] : 'Bilinmiyor'})</a>`;
-                    bgColor = 'bg-gray-900/70';
-                }
-
-                itemDiv.className = `p-4 ${bgColor} rounded-lg border border-gray-700 flex justify-between items-start transition duration-150 hover:border-blue-500/50`;
-                itemDiv.innerHTML = `
-                    <div class="flex-grow min-w-0">
-                        <div class="flex items-start">
-                            ${icon}
-                            <div class="min-w-0">
-                                <p class="font-semibold text-lg text-gray-100 truncate">${item.title}</p>
-                                <p class="text-xs text-gray-500">${item.date}</p>
                             </div>
                         </div>
-                        ${contentHtml}
                     </div>
-                    <button onclick="deleteContentItem('${container.id}', '${item.id}')"
-                            class="flex-shrink-0 ml-4 bg-red-700/50 hover:bg-red-600/70 text-white p-1 rounded-full btn-glow self-start">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" /></svg>
-                    </button>
                 `;
-                list.appendChild(itemDiv);
+                container.innerHTML += html;
             });
         }
 
-        window.addNoteToContainer = async function(containerId) {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            const container = getContainerById(containerId);
-            if (!container || !isAuthReady || !userId) {
-                 showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
-                return;
-            }
-            const titleInput = document.getElementById('note-title');
-            const contentInput = document.getElementById('note-content');
-            const title = titleInput.value.trim();
-            const content = contentInput.value.trim();
+        // Initialize App
+        init();
 
-            if (!title || !content) {
-                showMessageBox("Uyarı", "Not başlığı ve içeriği boş olamaz.");
-                return;
-            }
-
-            const newItem = {
-                id: generateId(),
-                type: 'note',
-                title: title,
-                data: content,
-                date: new Date().toLocaleString('tr-TR')
-            };
-
-            container.content.unshift(newItem); 
-            await updateContainer(container); 
-
-            titleInput.value = '';
-            contentInput.value = '';
-            showMessageBox("Başarılı", "Notunuz konuma eklendi.");
-        }
-
-        window.handleFileUpload = async function(containerId) {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            const container = getContainerById(containerId);
-            if (!container || !isAuthReady || !userId) {
-                 showMessageBox("Hata", "Konum yüklenmedi veya kimlik doğrulama tamamlanmadı.");
-                return;
-            }
-            const fileInput = document.getElementById(`file-input-${containerId}`);
-            const titleInput = document.getElementById(`file-title-${containerId}`);
-            const file = fileInput.files[0];
-            const title = titleInput.value.trim() || file?.name || 'Yüklenen Dosya';
-
-            if (!file) {
-                showMessageBox("Uyarı", "Lütfen bir dosya seçin.");
-                return;
-            }
-
-            const MAX_SIZE_MB = 5;
-            if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-                 showMessageBox("Hata", `Dosya boyutu ${MAX_SIZE_MB}MB'ı geçemez. Lütfen daha küçük bir dosya kullanın.`);
-                return;
-            }
-
-            const reader = new FileReader();
-
-            reader.onload = async function(event) {
-                const base64Data = event.target.result;
-                const fileType = file.type.startsWith('image/') ? 'image' : 'file';
-
-                const newItem = {
-                    id: generateId(),
-                    type: fileType,
-                    title: title,
-                    data: base64Data,
-                    mimeType: file.type,
-                    date: new Date().toLocaleString('tr-TR')
-                };
-
-                container.content.unshift(newItem);
-                await updateContainer(container);
-
-                fileInput.value = '';
-                titleInput.value = '';
-                showMessageBox("Başarılı", `${fileType === 'image' ? 'Fotoğrafınız' : 'Dosyanız'} konuma eklendi.`);
-            };
-
-            reader.onerror = function(error) {
-                console.error("Dosya okuma hatası:", error);
-                showMessageBox("Hata", "Dosya yüklenirken bir sorun oluştu.");
-            };
-
-            reader.readAsDataURL(file);
-        }
-
-        window.deleteContentItem = async function(containerId, itemId) {
-            if (!isFirebaseAvailable) return showMessageBox("Hata", "Veritabanı devre dışı.");
-            const confirmed = await showConfirmationBox("Öğeyi Sil", "Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?");
-
-            if (confirmed) {
-                const container = getContainerById(containerId);
-                if (container) {
-                    container.content = container.content.filter(item => item.id !== itemId);
-                    await updateContainer(container);
-                    showMessageBox("Başarılı", "Öğe başarıyla silindi.");
-                }
-            }
-        }
-
-
-        // --- Initialization ---
-        window.onload = initFirebase;
     </script>
 </body>
 </html>
+
