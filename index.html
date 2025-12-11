@@ -1,385 +1,684 @@
 <!DOCTYPE html>
-<html lang="az">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>30 Günlük Master Plan</title>
+    <title>Gelişmiş Kişisel Kasa</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- FontAwesome İkonları -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        theme_red: '#FF4136', /* Custom Bright Red */
-                        dark: '#0d0d0d',
-                        darker: '#050505',
-                        panel: '#1a1a1a'
-                    },
                     fontFamily: {
-                        mono: ['Courier New', 'monospace'],
-                        sans: ['Inter', 'system-ui', 'sans-serif']
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        'brand-red': '#e11d48',    /* Rose-600 */
+                        'brand-green': '#059669',  /* Emerald-600 */
+                        'brand-dark': '#0f172a',
                     }
                 }
             }
         }
     </script>
+
     <style>
         body {
-            background-color: #050505;
-            color: #e0e0e0;
-            font-family: 'Inter', sans-serif;
+            /* Karışık renkli, hareketli arka plan */
+            background: linear-gradient(-45deg, #059669, #0f172a, #e11d48, #4f46e5);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            min-height: 100vh;
         }
-        .neon-text {
-            color: #FF4136; /* Bright Red Text */
-            text-shadow: 0 0 5px rgba(255, 65, 54, 0.5);
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
-        .accordion-content {
-            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
-        .accordion-content.active {
-            max-height: 1000px;
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .input-style:focus {
+            box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.2);
+        }
+
+        /* Küçük resim silme butonu animasyonu */
+        .img-preview-container:hover .img-remove-btn {
             opacity: 1;
         }
-        .check-custom {
-            accent-color: #FF4136; /* Bright Red Accent */
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
+
+        /* Kartlardaki İkonların Animasyonu */
+        .img-action-btn {
+            opacity: 0;
+            transition: opacity 0.3s;
         }
-        /* Custom Scrollbar (Red) */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0d0d0d;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #FF4136;
-            border-radius: 4px;
+
+        .relative:hover .img-action-btn {
+            opacity: 1;
         }
     </style>
 </head>
-<body class="min-h-screen pb-20">
+<body class="p-4 md:p-8 flex justify-center items-start text-brand-dark">
 
-    <!-- Sticky Header -->
-    <div class="sticky top-0 z-50 bg-darker/95 backdrop-blur-md border-b border-red-900 p-4 shadow-lg">
-        <div class="flex justify-between items-center mb-2">
-            <h1 class="text-2xl font-bold neon-text tracking-tighter"><i class="fas fa-terminal mr-2"></i>MASTER PLAN</h1>
-            <div class="text-xs text-red-400 font-mono" id="current-date">GÜN 1</div>
-        </div>
+    <div class="w-full max-w-7xl space-y-8">
         
-        <!-- Progress Bar (Red) -->
-        <div class="w-full bg-gray-800 rounded-full h-3 mb-1">
-            <div id="progress-bar" class="bg-red-500 h-3 rounded-full transition-all duration-500 shadow-[0_0_10px_#FF4136]" style="width: 0%"></div>
+        <!-- Üst Başlık -->
+        <header class="glass-panel p-6 rounded-3xl shadow-2xl flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-brand-red to-brand-green rounded-xl flex items-center justify-center text-white text-2xl shadow-lg transform rotate-3">
+                    <i class="fa-solid fa-box-archive"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-brand-red">
+                        Süper Kasa
+                    </h1>
+                    <p class="text-gray-500 text-sm font-medium">Fotoğraf, not ve linkleri tek yerde toplayın. Düzenlenebilir.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 text-sm">
+                <div class="px-4 py-2 bg-green-100 text-brand-green rounded-full font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-hard-drive"></i>
+                    <span id="storage-usage">Hesaplanıyor...</span>
+                </div>
+                <button onclick="clearForm()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-full font-bold hover:bg-gray-300 transition hidden" id="cancel-edit-btn">
+                    <i class="fa-solid fa-times"></i> Düzenlemeyi İptal Et
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- SOL TARAF: Gelişmiş Form (4 birim genişlik) -->
+            <aside class="lg:col-span-4 space-y-6">
+                <div class="glass-panel p-6 rounded-3xl shadow-xl sticky top-8 border-t-4 border-brand-red">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-gray-800" id="form-title">
+                        <i class="fa-solid fa-plus-circle text-brand-red"></i> Yeni Kayıt Oluştur
+                    </h2>
+
+                    <form id="vault-form" class="space-y-4">
+                        <input type="hidden" id="edit-id"> <!-- Düzenleme Modu için ID -->
+
+                        <!-- Başlık -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Başlık</label>
+                            <input type="text" id="title" placeholder="Örn: Tatil Anıları" required
+                                class="input-style w-full p-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:border-brand-green outline-none font-bold text-gray-800">
+                        </div>
+
+                        <!-- 1. Metin Alanı -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Not / Açıklama</label>
+                            <textarea id="text-content" rows="3" placeholder="Notunuzu buraya yazın..."
+                                class="input-style w-full p-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:border-brand-green outline-none resize-none"></textarea>
+                        </div>
+
+                        <!-- 2. Linkler -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Linkler</label>
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" id="link-input" placeholder="https://..." 
+                                    class="input-style flex-1 p-2 rounded-lg bg-gray-50 border-2 border-gray-100 focus:border-brand-green outline-none text-sm">
+                                <button type="button" onclick="addLinkToStack()" class="bg-blue-100 text-blue-600 px-3 rounded-lg hover:bg-blue-200 font-bold text-sm">Ekle</button>
+                            </div>
+                            <!-- Eklenen Linklerin Listesi (Geçici) -->
+                            <div id="temp-link-list" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <!-- 3. Fotoğraflar -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Fotoğraflar (Çoklu)</label>
+                            <div class="relative group">
+                                <label for="file-input" class="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 hover:border-brand-green transition-colors">
+                                    <div class="text-center">
+                                        <i class="fa-solid fa-images text-2xl text-gray-400 mb-1"></i>
+                                        <p class="text-xs text-gray-500 font-semibold">Fotoğraf Seçmek İçin Tıkla</p>
+                                    </div>
+                                    <input type="file" id="file-input" accept="image/*" multiple class="hidden" onchange="handleFileSelect(this)">
+                                </label>
+                            </div>
+                            <!-- Eklenen Resimlerin Önizlemesi (Geçici) -->
+                            <div id="temp-img-list" class="grid grid-cols-3 gap-2 mt-2"></div>
+                        </div>
+
+                        <!-- Şifre -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Şifre (İsteğe Bağlı)</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <input type="password" id="password" placeholder="İçeriği gizle..."
+                                    class="input-style w-full pl-10 p-3 rounded-xl bg-gray-50 border-2 border-gray-100 focus:border-brand-red outline-none">
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submit-btn"
+                            class="w-full py-3 bg-gradient-to-r from-brand-green to-emerald-800 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-save"></i> <span id="btn-text">Kaydet</span>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+
+            <!-- SAĞ TARAF: Liste (8 birim genişlik) -->
+            <main class="lg:col-span-8">
+                <!-- Arama Kutusu -->
+                <div class="mb-6 relative">
+                    <i class="fa-solid fa-search absolute left-4 top-3.5 text-gray-400"></i>
+                    <input type="text" id="search-bar" placeholder="Notlarda ara..." onkeyup="searchNotes()" 
+                        class="w-full pl-10 pr-4 py-3 rounded-2xl glass-panel border-none outline-none focus:ring-2 ring-brand-green shadow-sm text-gray-700">
+                </div>
+
+                <div id="notes-grid" class="space-y-6">
+                    <!-- Notlar Buraya Gelecek (Kart değil, Akış şeklinde) -->
+                </div>
+                
+                <div id="empty-state" class="hidden glass-panel p-12 rounded-3xl text-center mt-10">
+                    <div class="text-6xl text-gray-300 mb-4"><i class="fa-regular fa-folder-open"></i></div>
+                    <h3 class="text-xl font-bold text-gray-600">Henüz hiç kayıt yok</h3>
+                    <p class="text-gray-400">Soldaki formu kullanarak ilk çoklu içeriğinizi oluşturun.</p>
+                </div>
+            </main>
         </div>
-        <div class="flex justify-between text-xs text-gray-400 font-mono">
-            <span>START</span>
-            <span id="progress-text">0%</span>
-            <span>HƏDƏF</span>
+    </div>
+
+    <!-- Bildirim -->
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div class="bg-brand-dark text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-gray-700">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-brand-green"></i>
+            <span id="toast-msg" class="font-medium">İşlem Başarılı</span>
         </div>
-    </div>
-
-    <!-- Week Selector (Red) -->
-    <div class="p-4 grid grid-cols-4 gap-2 mb-2">
-        <button onclick="switchWeek(1)" class="week-btn active-week bg-red-900/30 border border-red-500 text-red-400 rounded p-2 text-xs font-bold transition-all hover:bg-red-500 hover:text-black">Həftə 1</button>
-        <button onclick="switchWeek(2)" class="week-btn bg-gray-900 border border-gray-700 text-gray-500 rounded p-2 text-xs font-bold transition-all hover:border-red-500 hover:text-red-400">Həftə 2</button>
-        <button onclick="switchWeek(3)" class="week-btn bg-gray-900 border border-gray-700 text-gray-500 rounded p-2 text-xs font-bold transition-all hover:border-red-500 hover:text-red-400">Həftə 3</button>
-        <button onclick="switchWeek(4)" class="week-btn bg-gray-900 border border-gray-700 text-gray-500 rounded p-2 text-xs font-bold transition-all hover:border-red-500 hover:text-red-400">Həftə 4</button>
-    </div>
-
-    <!-- Content Area -->
-    <div id="days-container" class="px-4 space-y-4">
-        <!-- Days will be injected here via JS -->
-    </div>
-
-    <!-- Reset Data Button (Red) -->
-    <div class="fixed bottom-4 right-4">
-        <button onclick="resetData()" class="bg-red-900/80 text-red-200 text-xs px-3 py-2 rounded-lg backdrop-blur border border-red-500 shadow-lg">
-            <i class="fas fa-trash-alt mr-1"></i> Sıfırla
-        </button>
     </div>
 
     <script>
-        // DATA: Full 30 Day Schedule (Same as before)
-        const scheduleData = {
-            1: [
-                {
-                    day: 1,
-                    title: "Təməl: Natural Ədədlər & Shadowing Giriş",
-                    math: "Mövzu: Natural ədədlər, Toplama-Çıxma-Vurma sürəti.<br>Tapşırıq: 40 test (sadə hesablamalar). Səhvsiz olmalı.",
-                    eng: "Mövzu: SHADOWING (Kölgə) Texnikası.<br>Tapşırıq: Youtube-da 'Learn English with TV Series' kanalından 3 dəqiqəlik video aç. Hər cümləni dayandır və eyni səslə təkrar et. 20 dəfə təkrarla.",
-                    extra: "Axşam: 10 yeni fel (Verb) öyrən və dəftərə yaz."
-                },
-                {
-                    day: 2,
-                    title: "Adi Kəsrlər & Qulaq Asma",
-                    math: "Mövzu: Adi kəsrlər (Düzgün, Düzgün olmayan).<br>Tapşırıq: Ortaq məxrəcə gətirmə üzrə 30 test. Kəsrlərin ixtisarı.",
-                    eng: "Mövzu: Passive Listening (Passiv Dinləmə).<br>Tapşırıq: Yolda/İşdə '6 Minute English' (BBC) podkastına qulaq as. Başa düşməsən də dayandırma.",
-                    extra: "Axşam: Günü ingiliscə 3 cümlə ilə yekunlaşdır."
-                },
-                {
-                    day: 3,
-                    title: "Onluq Kəsrlər & Günlük Yazmaq",
-                    math: "Mövzu: Vergüllü ədədlər (Toplama, çıxma).<br>Tapşırıq: Market qəbzi kimi hesablamalar apar. 30 test həll et.",
-                    eng: "Mövzu: Writing (Yazı).<br>Tapşırıq: 'Dünən nə etdim?' mövzusunda sadə keçmiş zamanda (Past Simple) 5 cümlə yaz. Google Translate-də yoxla.",
-                    extra: "Axşam: Səhvlərini analiz et."
-                },
-                {
-                    day: 4,
-                    title: "Faiz və Nisbət & Güzgü Texnikası",
-                    math: "Mövzu: Ədədin faizini tapmaq. Tənasüb qurmaq.<br>Tapşırıq: Məsələ həlli (Mağaza endirimləri tipli məsələlər).",
-                    eng: "Mövzu: Speaking (Özünlə).<br>Tapşırıq: Güzgü qarşısına keç. 2 dəqiqə özünü təqdim et (Adın, yaşın, hobbin). Dayanmaq olmaz.",
-                    extra: "Axşam: Shadowing davam edir (yeni video)."
-                },
-                {
-                    day: 5,
-                    title: "Sadə Tənliklər & Film Gecəsi",
-                    math: "Mövzu: X-i tapmaq. Mötərizələri açmaq.<br>Tapşırıq: 2(x+3)=10 tipli 40 tənlik həll et.",
-                    eng: "Mövzu: Əyləncəli öyrənmə.<br>Tapşırıq: İngilis dilində sevdiyin bir cizgi filmini (sadə dil olur) İngilis altyazısı ilə izlə.",
-                    extra: "Axşam: Filmdən 5 yeni söz çıxar."
-                },
-                {
-                    day: 6,
-                    title: "Həftəlik Təkrar (Riyaziyyat) & Hekayə",
-                    math: "Mövzu: İlk 5 günün qarışıq təkrarı.<br>Tapşırıq: Səhv etdiyin testlərə yenidən bax.",
-                    eng: "Mövzu: Vocabulary Story.<br>Tapşırıq: Bu həftə öyrəndiyin 20 sözdən istifadə edərək mənasız da olsa bir hekayə yaz.",
-                    extra: "Axşam: Sərbəst vaxt (İngiliscə musiqi dinlə)."
-                },
-                {
-                    day: 7,
-                    title: "BAZAR GÜNÜ: Tam Sınaq",
-                    math: "Tapşırıq: Özünə 20 suallıq sınaq hazırla və zamanla yarış (30 dəqiqə).",
-                    eng: "Tapşırıq: Öz səsini telefona yaz. 'My next week plans' (Gələn həftə planlarım) haqqında danış. Qulaq as və səhvlərini tap.",
-                    extra: "Plan: Növbəti həftənin cədvəlinə bax."
-                }
-            ],
-            2: [
-                {
-                    day: 8,
-                    title: "Çoxhədli & Təsvir Etmə",
-                    math: "Mövzu: Müxtəsər Vurma Düsturları (a+b)².<br>Tapşırıq: Düsturları əzbərlə və 30 misal həll et.",
-                    eng: "Mövzu: Speaking (Description).<br>Tapşırıq: Otağındakı əşyaları ingiliscə təsvir et (rəngi, forması, yeri).",
-                    extra: "Axşam: Shadowing (Sürəti artır)."
-                },
-                {
-                    day: 9,
-                    title: "Kvadrat Köklər & Sual Vermək",
-                    math: "Mövzu: Kökaltı ifadələr.<br>Tapşırıq: Kökləri hesablamaq üzrə 40 test.",
-                    eng: "Mövzu: Grammar (Questions).<br>Tapşırıq: Özünə 20 sual hazırla (What, Where, When, How) və cavabla.",
-                    extra: "Axşam: Podkast dinlə."
-                },
-                {
-                    day: 10,
-                    title: "Kvadrat Tənliklər & Oxu",
-                    math: "Mövzu: Diskriminant (D=b²-4ac).<br>Tapşırıq: Tənliklərin köklərini tapmaq.",
-                    eng: "Mövzu: Reading.<br>Tapşırıq: 'News in Levels' saytından Level 2 xəbər oxu və ucadan təkrarla.",
-                    extra: "Axşam: Yeni sözləri lüğətə yaz."
-                },
-                {
-                    day: 11,
-                    title: "Bərabərsizliklər & Debat",
-                    math: "Mövzu: Böyükdür (>), Kiçikdir (<).<br>Tapşırıq: İnterval üsulu ilə həllər.",
-                    eng: "Mövzu: Speaking (Opinion).<br>Tapşırıq: 'Social Media is good or bad?' mövzusunda öz fikrini 3 dəqiqə izah et.",
-                    extra: "Axşam: Shadowing (TED Talks)."
-                },
-                {
-                    day: 12,
-                    title: "Sistem Tənliklər & Dialoq",
-                    math: "Mövzu: İki dəyişənli tənliklər sistemi.<br>Tapşırıq: Əvəzetmə və toplama üsulu.",
-                    eng: "Mövzu: Dialogue Simulation.<br>Tapşırıq: Restoranda yemək sifarişi verən müştəri və ofisiantın dialoqunu tək oyna.",
-                    extra: "Axşam: İngilis dilində qısa hekayə oxu."
-                },
-                {
-                    day: 13,
-                    title: "Cəbr Yekun & Altyazısız İzləmə",
-                    math: "Mövzu: 50 suallıq qarışıq test.",
-                    eng: "Mövzu: Listening Challenge.<br>Tapşırıq: 5 dəqiqəlik videoya altyazısız bax. Nə başa düşdünsə qeyd et.",
-                    extra: "Axşam: Səhvlərin analizi."
-                },
-                {
-                    day: 14,
-                    title: "SINAQ GÜNÜ (Cəbr & Speaking)",
-                    math: "Tapşırıq: Özünü yoxla (DİM toplu və ya online sınaq).",
-                    eng: "Tapşırıq: 'My Dream Job' mövzusunda video çək (5 dəqiqə).",
-                    extra: "İstirahət."
-                }
-            ],
-            3: [
-                { day: 15, title: "Funksiyalar Giriş", math: "Mövzu: y=kx+b. Qrafik qurma.", eng: "Speaking: Şəkil təsviri.", extra: "..." },
-                { day: 16, title: "Funksiya Qrafikləri", math: "Mövzu: Koordinat sistemi. Nöqtələri tapmaq.", eng: "Listening: CNN News (1 xəbər).", extra: "..." },
-                { day: 17, title: "Kvadratik Funksiya", math: "Mövzu: Parabola. Təpə nöqtəsi.", eng: "Writing: Gələcək məktub.", extra: "..." },
-                { day: 18, title: "Ehtimal Nəzəriyyəsi", math: "Mövzu: Sadə ehtimal məsələləri.", eng: "Speaking: 'If I were rich...' (Şərt budaq cümlələri).", extra: "..." },
-                { day: 19, title: "Statistika", math: "Mövzu: Diaqramlar, Moda, Median.", eng: "Shadowing: Çətin səviyyə.", extra: "..." },
-                { day: 20, title: "Təkrar (Funksiyalar)", math: "Mövzu: Qrafikləri oxumaq.", eng: "Movie: Filmi fasilələrlə izlə, ifadələri yaz.", extra: "..." },
-                { day: 21, title: "Həftəlik Sınaq", math: "Sınaq: Funksiyalar.", eng: "Sınaq: B1 online test et.", extra: "..." },
-            ],
-            4: [
-                { day: 22, title: "Həndəsə: Bucaqlar", math: "Mövzu: Qonşu və qarşılıqlı bucaqlar.", eng: "Speaking: Real mövzu (Politics/Sport).", extra: "..." },
-                { day: 23, title: "Üçbucaqlar 1", math: "Mövzu: Üçbucaq bərabərsizliyi, Tənbölən.", eng: "Listening: Audio kitab (1 fəsil).", extra: "..." },
-                { day: 24, title: "Üçbucaqlar 2", math: "Mövzu: Pifaqor teoremi (Ən vacib).", eng: "Thinking: Bütün günü ingiliscə düşünməyə çalış.", extra: "..." },
-                { day: 25, title: "Dördbucaqlılar", math: "Mövzu: Kvadrat, düzbucaqlı sahəsi.", eng: "Writing: Review (Oxuduğun kitaba rəy yaz).", extra: "..." },
-                { day: 26, title: "Çevrə və Dairə", math: "Mövzu: Radius, Diametr, Uzunluq.", eng: "Speaking: 15 dəqiqə non-stop danış.", extra: "..." },
-                { day: 27, title: "Həndəsə Yekun", math: "Mövzu: Sahə məsələləri.", eng: "Shadowing: Final məşq.", extra: "..." },
-                { day: 28, title: "Ümumi Təkrar (Riyaziyyat)", math: "Bütün 30 günün xülasəsi.", eng: "Ümumi təkrar (Lüğət).", extra: "..." },
-                { day: 29, title: "Sərbəst Gün", math: "Beynini dincəlt.", eng: "Yalnız ingiliscə kontent izlə.", extra: "..." },
-                { day: 30, title: "FİNAL SINAQ", math: "Mövzu: Buraxılış imtahanı səviyyəsində sınaq.", eng: "Mövzu: B1 Tam Sınaq (Listening/Reading/Grammar).", extra: "Təbriklər! Mənə yaz." }
-            ]
-        };
-
-        let currentWeek = 1;
+        // --- GLOBAL DEĞİŞKENLER ---
+        let tempLinks = [];
+        let tempImages = []; // Base64 stringleri burada tutulacak
         
-        // Load progress from localStorage
-        let progress = JSON.parse(localStorage.getItem('studyProgress')) || {};
+        // --- BAŞLANGIÇ ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNotes();
+            updateStorageUsage();
+        });
 
-        function init() {
-            renderWeek(1);
-            updateProgress();
-        }
+        // --- FORM İŞLEMLERİ ---
 
-        function switchWeek(week) {
-            currentWeek = week;
-            document.querySelectorAll('.week-btn').forEach((btn, index) => {
-                // Change classes for Red theme
-                if (index + 1 === week) {
-                    btn.classList.add('bg-red-900/30', 'text-red-400', 'border-red-500', 'active-week');
-                    btn.classList.remove('bg-gray-900', 'text-gray-500', 'border-gray-700');
-                } else {
-                    btn.classList.remove('bg-red-900/30', 'text-red-400', 'border-red-500', 'active-week');
-                    btn.classList.add('bg-gray-900', 'text-gray-500', 'border-gray-700');
-                }
-            });
-            renderWeek(week);
-        }
-
-        function toggleDay(id) {
-            const content = document.getElementById(`content-${id}`);
-            const icon = document.getElementById(`icon-${id}`);
-            const allContents = document.querySelectorAll('.accordion-content');
-            const allIcons = document.querySelectorAll('.fa-chevron-down');
-
-            // Close others
-            allContents.forEach(c => {
-                if (c.id !== `content-${id}`) {
-                    c.classList.remove('active');
-                    c.style.maxHeight = null;
-                }
-            });
-            allIcons.forEach(i => {
-                if (i.id !== `icon-${id}`) {
-                    i.style.transform = 'rotate(0deg)';
-                }
-            });
-
-            // Toggle current
-            content.classList.toggle('active');
-            if (content.classList.contains('active')) {
-                content.style.maxHeight = content.scrollHeight + "px";
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                content.style.maxHeight = null;
-                icon.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        function toggleTask(day, type) {
-            const key = `d${day}_${type}`;
-            if (progress[key]) {
-                delete progress[key];
-            } else {
-                progress[key] = true;
-            }
-            localStorage.setItem('studyProgress', JSON.stringify(progress));
-            updateProgress();
-        }
-
-        function updateProgress() {
-            const totalTasks = 30 * 2; // 30 days * 2 main tasks (simplified for progress bar)
-            const completedTasks = Object.keys(progress).length;
-            const percent = Math.min(100, Math.round((completedTasks / totalTasks) * 100));
+        // 1. Link Ekleme (Geçici Listeye)
+        function addLinkToStack() {
+            const input = document.getElementById('link-input');
+            const url = input.value.trim();
+            if(!url) return;
             
-            document.getElementById('progress-bar').style.width = `${percent}%`;
-            document.getElementById('progress-text').innerText = `${percent}%`;
+            // Basit URL düzeltme
+            const finalUrl = url.startsWith('http') ? url : 'https://' + url;
+            
+            tempLinks.push(finalUrl);
+            input.value = '';
+            renderTempLinks();
         }
 
-        function resetData() {
-            if(confirm("Bütün tərəqqini silmək istədiyinə əminsən?")) {
-                localStorage.removeItem('studyProgress');
-                progress = {};
-                updateProgress();
-                renderWeek(currentWeek);
+        function removeTempLink(index) {
+            tempLinks.splice(index, 1);
+            renderTempLinks();
+        }
+
+        function renderTempLinks() {
+            const container = document.getElementById('temp-link-list');
+            container.innerHTML = tempLinks.map((link, i) => `
+                <div class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs flex items-center gap-2 border border-blue-100">
+                    <span class="truncate max-w-[150px]">${link}</span>
+                    <button type="button" onclick="removeTempLink(${i})" class="hover:text-red-500"><i class="fa-solid fa-times"></i></button>
+                </div>
+            `).join('');
+        }
+
+        // 2. Resim Seçme ve Base64 Çevirme
+        async function handleFileSelect(input) {
+            const files = Array.from(input.files);
+            if(files.length === 0) return;
+
+            for (const file of files) {
+                if(file.size > 800000) { // 800KB limit uyarısı
+                    showToast(`${file.name} çok büyük! (Max 800KB)`, 'error');
+                    continue;
+                }
+                try {
+                    const base64 = await toBase64(file);
+                    tempImages.push(base64);
+                } catch (e) {
+                    console.error("Resim hatası", e);
+                }
             }
+            input.value = ''; // Inputu temizle ki tekrar aynı dosyayı seçebilsin
+            renderTempImages();
         }
 
-        function renderWeek(week) {
-            const container = document.getElementById('days-container');
+        function removeTempImage(index) {
+            tempImages.splice(index, 1);
+            renderTempImages();
+        }
+
+        function renderTempImages() {
+            const container = document.getElementById('temp-img-list');
+            container.innerHTML = tempImages.map((img, i) => `
+                <div class="relative group img-preview-container h-16 w-full rounded-lg overflow-hidden border border-gray-200">
+                    <img src="${img}" class="w-full h-full object-cover">
+                    <button type="button" onclick="removeTempImage(${i})" class="img-remove-btn absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 transition-opacity">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // 3. Form Gönderme (Kaydet veya Güncelle)
+        document.getElementById('vault-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const editId = document.getElementById('edit-id').value;
+            const title = document.getElementById('title').value;
+            const textContent = document.getElementById('text-content').value;
+            const password = document.getElementById('password').value;
+
+            if(!title && !textContent && tempImages.length === 0 && tempLinks.length === 0) {
+                showToast('Lütfen en az bir içerik girin.', 'error');
+                return;
+            }
+
+            const notes = getNotes();
+
+            if (editId) {
+                // --- GÜNCELLEME MODU ---
+                const index = notes.findIndex(n => n.id == editId);
+                if (index > -1) {
+                    notes[index].title = title;
+                    notes[index].text = textContent;
+                    notes[index].password = password;
+                    notes[index].links = [...tempLinks]; // Linkleri yenisiyle değiştir
+                    notes[index].images = [...tempImages]; // Resimleri yenisiyle değiştir
+                    notes[index].updatedDate = new Date().toLocaleString('tr-TR');
+                    
+                    showToast('Kayıt başarıyla güncellendi', 'success');
+                }
+            } else {
+                // --- YENİ KAYIT MODU ---
+                const newNote = {
+                    id: Date.now(),
+                    title,
+                    text: textContent,
+                    password,
+                    links: [...tempLinks],
+                    images: [...tempImages],
+                    createdDate: new Date().toLocaleDateString('tr-TR'),
+                    updatedDate: new Date().toLocaleString('tr-TR')
+                };
+                notes.unshift(newNote);
+                showToast('Yeni kayıt oluşturuldu', 'success');
+            }
+
+            // LocalStorage'a Kaydet
+            try {
+                localStorage.setItem('superVaultNotes', JSON.stringify(notes));
+                renderNotes();
+                updateStorageUsage();
+                clearForm();
+            } catch (err) {
+                showToast('Hafıza doldu! Bazı resimleri silin.', 'error');
+                console.error(err);
+            }
+        });
+
+        // --- LİSTELEME VE GÖRÜNTÜLEME ---
+
+        function getNotes() {
+            return JSON.parse(localStorage.getItem('superVaultNotes')) || [];
+        }
+
+        function renderNotes(searchTerm = '') {
+            const container = document.getElementById('notes-grid');
+            const notes = getNotes();
+            const emptyState = document.getElementById('empty-state');
+            
             container.innerHTML = '';
             
-            const days = scheduleData[week];
-            
-            days.forEach(data => {
-                const isMathDone = progress[`d${data.day}_math`] ? 'checked' : '';
-                const isEngDone = progress[`d${data.day}_eng`] ? 'checked' : '';
+            const filtered = notes.filter(n => 
+                n.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                n.text.toLowerCase().includes(searchTerm.toLowerCase())
+            );
 
+            if (filtered.length === 0) {
+                if(!searchTerm) emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            filtered.forEach(note => {
+                const isLocked = note.password && note.password.trim() !== "";
                 
-                const html = `
-                    <div class="bg-panel rounded-xl border border-gray-800 overflow-hidden shadow-lg transition-all hover:border-red-900">
-                        <div onclick="toggleDay(${data.day})" class="p-4 flex justify-between items-center cursor-pointer bg-gradient-to-r from-gray-900 to-black">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-red-500/30 text-red-500 font-bold font-mono text-lg shadow-[0_0_10px_rgba(255,65,54,0.1)]">
-                                    ${data.day}
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-gray-200 text-sm md:text-base">${data.title}</h3>
-                                </div>
+                // Kart Yapısı
+                const card = document.createElement('div');
+                card.className = 'glass-card rounded-2xl p-6 relative group border-l-4 border-l-brand-green';
+
+                // Kart Üst Kısmı (Başlık ve Butonlar)
+                const header = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">${note.title}</h3>
+                            <div class="text-xs text-gray-400 font-mono mt-1">
+                                <i class="fa-regular fa-clock"></i> ${note.updatedDate || note.createdDate}
                             </div>
-                            <i id="icon-${data.day}" class="fas fa-chevron-down text-gray-500 transition-transform duration-300"></i>
                         </div>
-                        
-                        <div id="content-${data.day}" class="accordion-content bg-black/50">
-                            <div class="p-4 space-y-4 border-t border-gray-800">
-                                
-                                <!-- Math Section (Yellow/Orange border for contrast) -->
-                                <div class="relative pl-4 border-l-2 border-orange-500/50">
-                                    <h4 class="text-orange-400 text-xs font-bold uppercase mb-1 tracking-wider"><i class="fas fa-calculator mr-1"></i> Riyaziyyat (Səhər)</h4>
-                                    <p class="text-gray-400 text-sm mb-2 leading-relaxed">${data.math}</p>
-                                    <label class="flex items-center space-x-2 cursor-pointer mt-2 group">
-                                        <input type="checkbox" class="check-custom" onclick="toggleTask(${data.day}, 'math')" ${isMathDone}>
-                                        <span class="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">Tamamladım</span>
-                                    </label>
-                                </div>
-
-                                <!-- English Section (Cyan/Blue border for contrast) -->
-                                <div class="relative pl-4 border-l-2 border-cyan-500/50">
-                                    <h4 class="text-cyan-400 text-xs font-bold uppercase mb-1 tracking-wider"><i class="fas fa-language mr-1"></i> İngiliscə (Gündüz)</h4>
-                                    <p class="text-gray-400 text-sm mb-2 leading-relaxed">${data.eng}</p>
-                                    <label class="flex items-center space-x-2 cursor-pointer mt-2 group">
-                                        <input type="checkbox" class="check-custom" onclick="toggleTask(${data.day}, 'eng')" ${isEngDone}>
-                                        <span class="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">Tamamladım</span>
-                                    </label>
-                                </div>
-
-                                <!-- Extra Section (Dark Red accent) -->
-                                <div class="bg-red-900/10 p-3 rounded border border-red-900/30">
-                                    <h4 class="text-red-500 text-xs font-bold uppercase mb-1"><i class="fas fa-moon mr-1"></i> Axşam Rutini</h4>
-                                    <p class="text-gray-400 text-xs italic">${data.extra}</p>
-                                </div>
-
-                            </div>
+                        <div class="flex gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="editNote(${note.id})" class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition" title="Düzenle">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button onclick="deleteNote(${note.id})" class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition" title="Sil">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
                         </div>
                     </div>
                 `;
-                container.innerHTML += html;
+
+                // Kilitli İçerik
+                if (isLocked) {
+                    card.innerHTML = `
+                        ${header}
+                        <div class="bg-gray-100 rounded-xl p-8 text-center relative overflow-hidden" id="lock-wrapper-${note.id}">
+                            <div class="absolute inset-0 bg-gray-200/50 blur-sm"></div>
+                            <div class="relative z-10 flex flex-col items-center">
+                                <i class="fa-solid fa-lock text-4xl text-brand-red mb-2"></i>
+                                <p class="font-bold text-gray-600 mb-3">Bu içerik şifrelenmiş</p>
+                                <div class="flex gap-2 justify-center">
+                                    <input type="password" id="pass-${note.id}" placeholder="Şifre" class="w-32 px-3 py-2 rounded-lg border focus:ring-2 ring-brand-red outline-none text-sm">
+                                    <button onclick="unlockNote(${note.id}, '${note.password}')" class="bg-brand-red text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-700">Aç</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="content-${note.id}" class="hidden"></div> <!-- Kilit açılınca burası dolacak -->
+                    `;
+                } else {
+                    // Kilitli Değilse Doğrudan İçeriği Göster
+                    card.innerHTML = header + generateContentHTML(note);
+                }
+
+                container.appendChild(card);
             });
         }
 
-        // Initialize App
-        init();
+        function generateContentHTML(note) {
+            let html = '<div class="space-y-4">';
+
+            // Metin
+            if (note.text) {
+                html += `<div class="text-gray-700 whitespace-pre-wrap leading-relaxed bg-white/50 p-3 rounded-lg border border-gray-100">${note.text}</div>`;
+            }
+
+            // Linkler
+            if (note.links && note.links.length > 0) {
+                html += '<div class="flex flex-wrap gap-2">';
+                note.links.forEach(link => {
+                    html += `
+                        <a href="${link}" target="_blank" class="flex items-center gap-2 bg-blue-50 text-blue-600 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-100 transition border border-blue-100">
+                            <i class="fa-solid fa-link"></i> ${link.replace('https://','').substring(0, 25)}...
+                        </a>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            // Fotoğraflar (Grid Galeri)
+            if (note.images && note.images.length > 0) {
+                html += `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 pt-2">`;
+                note.images.forEach((img, index) => {
+                    // İndirme için dinamik dosya adı
+                    const filename = `${note.title.replace(/[^a-z0-9]/gi, '_') || 'kasa'}_resim_${note.id}_${index}.png`;
+
+                    html += `
+                        <div class="relative group aspect-square rounded-xl overflow-hidden shadow-sm border border-gray-200 bg-white">
+                            <img src="${img}" class="w-full h-full object-cover">
+                            
+                            <!-- İndirme Butonu -->
+                            <button onclick="downloadBase64Image('${img}', '${filename}')" 
+                                class="img-action-btn absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-brand-green" 
+                                title="Resmi İndir">
+                                <i class="fa-solid fa-download text-xs"></i>
+                            </button>
+                            
+                            <!-- Tam Ekran Görüntüleme Butonu -->
+                            <button onclick="openFullImage('${img}')"
+                                class="img-action-btn absolute top-1 left-1 p-1 bg-black/50 text-white rounded-full hover:bg-blue-600" 
+                                title="Tam Ekran Görüntüle">
+                                <i class="fa-solid fa-eye text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        // --- İŞLEVLER ---
+
+        function editNote(id) {
+            const notes = getNotes();
+            const note = notes.find(n => n.id === id);
+            if (!note) return;
+
+            // Şifre varsa sor
+            if (note.password && prompt("Düzenlemek için şifreyi girin:") !== note.password) {
+                showToast("Yanlış şifre!", "error");
+                return;
+            }
+
+            // Formu Doldur
+            document.getElementById('edit-id').value = note.id;
+            document.getElementById('title').value = note.title;
+            document.getElementById('text-content').value = note.text;
+            document.getElementById('password').value = note.password;
+            
+            // Geçici dizileri doldur
+            tempLinks = [...(note.links || [])];
+            tempImages = [...(note.images || [])];
+            
+            // UI Güncelle
+            renderTempLinks();
+            renderTempImages();
+            
+            // Buton ve Başlıkları Değiştir
+            document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-pen text-brand-green"></i> Kaydı Düzenle`;
+            document.getElementById('btn-text').innerText = "Değişiklikleri Kaydet";
+            document.getElementById('submit-btn').classList.remove('from-brand-green', 'to-emerald-800');
+            document.getElementById('submit-btn').classList.add('from-blue-600', 'to-blue-800');
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            // Formu görünecek şekilde yukarı kaydır
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast('Düzenleme modu aktif', 'success');
+        }
+
+        function clearForm() {
+            document.getElementById('vault-form').reset();
+            document.getElementById('edit-id').value = '';
+            tempLinks = [];
+            tempImages = [];
+            renderTempLinks();
+            renderTempImages();
+
+            // UI Reset
+            document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-plus-circle text-brand-red"></i> Yeni Kayıt Oluştur`;
+            document.getElementById('btn-text').innerText = "Kaydet";
+            document.getElementById('submit-btn').classList.add('from-brand-green', 'to-emerald-800');
+            document.getElementById('submit-btn').classList.remove('from-blue-600', 'to-blue-800');
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+        }
+
+        function deleteNote(id) {
+            if(!confirm('Bu kaydı tamamen silmek istediğinize emin misiniz?')) return;
+            const notes = getNotes().filter(n => n.id !== id);
+            localStorage.setItem('superVaultNotes', JSON.stringify(notes));
+            renderNotes();
+            updateStorageUsage();
+            showToast('Kayıt silindi', 'success');
+        }
+
+        function unlockNote(id, realPass) {
+            const input = document.getElementById(`pass-${id}`);
+            if (input.value === realPass) {
+                const notes = getNotes();
+                const note = notes.find(n => n.id === id);
+                
+                document.getElementById(`lock-wrapper-${id}`).classList.add('hidden');
+                const contentDiv = document.getElementById(`content-${id}`);
+                contentDiv.classList.remove('hidden');
+                contentDiv.innerHTML = generateContentHTML(note);
+                
+                showToast('Kilit açıldı', 'success');
+            } else {
+                input.classList.add('ring-2', 'ring-red-500');
+                showToast('Hatalı Şifre', 'error');
+            }
+        }
+
+        function searchNotes() {
+            const term = document.getElementById('search-bar').value;
+            renderNotes(term);
+        }
+
+        // Resmi tam ekran açma (Basit modal)
+        window.openFullImage = (src) => {
+            // Yeni pencerede tam resmi açmak için basit bir yöntem
+            const win = window.open("", "_blank");
+            win.document.write(`
+                <style>body { margin: 0; background: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }</style>
+                <img src="${src}" style="max-width:95vw; max-height:95vh; object-fit:contain;">
+            `);
+        };
+
+        // Base64'ten Blob oluşturma (İndirme için gerekli)
+        function b64toBlob(b64Data) {
+            // Mime type'ı veri URL'sinden çıkar (örneğin 'image/png')
+            const mimeMatch = b64Data.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);/);
+            const contentType = mimeMatch ? mimeMatch[1] : 'image/png';
+            
+            // Base64 kısmını al
+            const base64 = b64Data.split(',')[1];
+            const byteCharacters = atob(base64);
+            const byteArrays = [];
+            const sliceSize = 512;
+
+            for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+                const slice = byteCharacters.slice(offset, offset + sliceSize);
+                const byteNumbers = new Array(slice.length);
+                for (let i = 0; i < slice.length; i++) {
+                    byteNumbers[i] = slice.charCodeAt(i);
+                }
+                byteArrays.push(new Uint8Array(byteNumbers));
+            }
+            
+            return new Blob(byteArrays, { type: contentType });
+        }
+
+        // Base64 resmi indirme işlemi
+        window.downloadBase64Image = (base64Data, filename) => {
+            if (!base64Data.startsWith('data:')) {
+                showToast('İndirilecek veri formatı hatalı.', 'error');
+                return;
+            }
+            
+            try {
+                const blob = b64toBlob(base64Data);
+                const url = URL.createObjectURL(blob);
+        
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showToast('Resim indirme işlemi başlatıldı.', 'success');
+            } catch (e) {
+                showToast('İndirme sırasında bir hata oluştu.', 'error');
+                console.error("Download Error:", e);
+            }
+        };
+
+        // Resim Dosyasını Base64'e Çevirme
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        // Hafıza Kullanımı
+        function updateStorageUsage() {
+            let _lsTotal = 0, _xLen, _x;
+            for (_x in localStorage) {
+                if (!localStorage.hasOwnProperty(_x)) continue;
+                _xLen = ((localStorage[_x].length + _x.length) * 2);
+                _lsTotal += _xLen;
+            }
+            const total = (_lsTotal / 1024).toFixed(2);
+            const el = document.getElementById('storage-usage');
+            el.innerText = `${total} KB Kullanıldı`;
+            
+            // 4.5MB uyarısı (LocalStorage limiti genelde 5MB)
+            if(total > 4500) {
+                el.classList.add('text-red-600', 'bg-red-100');
+                el.innerText += " (DOLMAK ÜZERE!)";
+            } else {
+                el.classList.remove('text-red-600', 'bg-red-100');
+                el.classList.add('text-brand-green', 'bg-green-100');
+            }
+        }
+
+        // Toast Bildirim
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-msg');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.innerText = message;
+            if(type === 'error') {
+                iconEl.className = 'fa-solid fa-circle-exclamation text-brand-red';
+            } else {
+                iconEl.className = 'fa-solid fa-circle-check text-brand-green';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
 
     </script>
 </body>
 </html>
-
